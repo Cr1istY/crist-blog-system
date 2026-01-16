@@ -49,6 +49,8 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Title is required"})
 	}
 	req.Title = title
+	slug := utils.ToSlug(title)
+	req.Slug = slug
 	post := &model.Post{
 		UserID:          userID,
 		Title:           req.Title,
