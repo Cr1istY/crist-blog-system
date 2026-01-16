@@ -3,6 +3,7 @@ package handler
 import (
 	"crist-blog/internal/model"
 	"crist-blog/internal/service"
+	"crist-blog/internal/utils"
 	"net/http"
 	"strconv"
 	"time"
@@ -39,14 +40,15 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid category ID"})
 	}
 	defaultValue := 0
-
 	userID, err := uuid.Parse(userId)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 	}
-	if req.Title == "" {
+	title := utils.ExtractPostTitle(req.Content)
+	if title == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Title is required"})
 	}
+	req.Title = title
 	post := &model.Post{
 		UserID:          userID,
 		Title:           req.Title,
