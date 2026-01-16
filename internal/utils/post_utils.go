@@ -13,7 +13,7 @@ import (
 var (
 	nonAlnumRe    = regexp.MustCompile(`[^a-z0-9\s-]`)
 	spaceOrDashRe = regexp.MustCompile(`[\s-]+`)
-	chineseCharRe = regexp.MustCompile(`[\u4e00-\u9fff]`)
+	chineseCharRe = regexp.MustCompile(`[\x{4e00}-\x{9fff}]`)
 )
 
 func ExtractPostTitle(content string) string {
