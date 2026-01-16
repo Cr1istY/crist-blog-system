@@ -57,6 +57,8 @@ func ToSlug(title string) string {
 	// 生成随机数，填充在slug之后，防止slug重复
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	num := r.Intn(10)
-	slug += strconv.Itoa(num)
+	numChar := strconv.Itoa(num)
+	slug += "-"
+	slug += numChar
 	return slug
 }
