@@ -54,6 +54,9 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	slug := utils.ToSlug(title)
 	req.Slug = slug
 	req.MetaDescription = req.Excerpt
+	if req.Thumbnail == "" {
+		req.Thumbnail = assets.GetThumbnail()
+	}
 	post := &model.Post{
 		UserID:          userID,
 		Title:           req.Title,
@@ -216,6 +219,9 @@ func (h *PostHandler) ListToFrontend(c echo.Context) error {
 	for _, post := range posts {
 		if post.Status != model.Published {
 			continue
+		}
+		if post.Thumbnail == "" {
+			post.Thumbnail = assets.GetThumbnail()
 		}
 		blogPosts = append(blogPosts, &model.PostFrontend{
 			ID:        post.ID,

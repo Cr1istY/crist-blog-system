@@ -38,7 +38,9 @@ func SetupBlogRouter(e *echo.Echo, postHandler *handler.PostHandler, authService
 
 var allowedDomains = []string{
 	"th.bing.com",
-	"img.pconline.com.cn",
+	"gd-hbimg.huaban.com",
+	"image-assets.soutushenqi.com",
+	"i0.hdslb.com",
 }
 
 func isAllowedHost(host string) bool {
@@ -68,8 +70,8 @@ func proxyImage(c echo.Context) error {
 	// 创建带超时和 UA 的请求
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, _ := http.NewRequestWithContext(c.Request().Context(), "GET", imageURL, nil)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; ImageProxy/1.0)")
-	req.Header.Set("Referer", "https://www.bing.com/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Referer", "https://www.bilibili.com/")
 
 	resp, err := client.Do(req)
 	if err != nil {
