@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crist-blog/internal/assets"
 	"crist-blog/internal/model"
 	"crist-blog/internal/service"
 	"crist-blog/internal/utils"
@@ -106,6 +107,9 @@ func (h *PostHandler) GetBlogToViewers(c echo.Context) error {
 	categoryName, err := h.categoryService.GetNameByID(post.CategoryID)
 	if err != nil {
 		categoryName = "未分类"
+	}
+	if post.Thumbnail == "" {
+		post.Thumbnail = assets.GetThumbnail()
 	}
 	var postToViewers = &model.PostDetail{
 		ID:              post.ID,
