@@ -269,3 +269,29 @@ func (h *PostHandler) GetLatestPosts(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, blogPosts)
 }
+
+func (h *PostHandler) AddViews(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid post ID"})
+	}
+	err = h.postService.AddViews(uint(id))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": "Views added successfully"})
+}
+
+func (h *PostHandler) AddLikes(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid post ID"})
+	}
+	err = h.postService.AddLikes(uint(id))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": "Likes added successfully"})
+}

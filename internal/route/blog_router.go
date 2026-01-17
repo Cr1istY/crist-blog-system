@@ -24,6 +24,8 @@ func SetupBlogRouter(e *echo.Echo, postHandler *handler.PostHandler, authService
 	posts.GET("/get/:id", postHandler.GetBlogToViewers)
 	posts.GET("/hot", postHandler.GetHotPosts)
 	posts.GET("/latest", postHandler.GetLatestPosts)
+	posts.GET("/addViews/:id", postHandler.AddViews)
+	posts.GET("/addLikes/:id", postHandler.AddLikes)
 
 	// 需要认证的路由
 	protected := api.Group("/posts")

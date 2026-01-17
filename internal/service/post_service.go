@@ -66,3 +66,11 @@ func (s *PostService) GetHotPosts() ([]*model.HotPost, error) {
 func (s *PostService) GetLatestPosts() ([]*model.LatestPost, error) {
 	return s.PostRepo.GetLatestPosts()
 }
+
+func (s *PostService) AddViews(id uint) error {
+	return s.PostRepo.AddViews(id)
+}
+
+func (s *PostService) AddLikes(id uint) error {
+	return s.PostRepo.AddLikes(id)
+}

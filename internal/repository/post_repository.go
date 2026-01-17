@@ -54,7 +54,15 @@ func (r *PostRepository) GetLatestPosts() ([]*model.LatestPost, error) {
 		Select("id, title, category_id, created_at").
 		Where("status = ?", model.Published).
 		Order("created_at desc").
-		Limit(3).
+		Limit(2).
 		Find(&latestPosts).Error
 	return latestPosts, err
+}
+
+func (r *PostRepository) AddViews(id uint) error {
+	return r.DB.Model(&model.Post{}).Where("id = ?", id).UpdateColumn("views", gorm.Expr("views + ?", 1)).Error
+}
+
+func (r *PostRepository) AddLikes(id uint) error {
+	return r.DB.Model(&model.Post{}).Where("id = ?", id).UpdateColumn("likes", gorm.Expr("likes + ?", 1)).Error
 }
