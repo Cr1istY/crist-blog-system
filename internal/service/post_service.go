@@ -42,6 +42,7 @@ func (s *PostService) Update(post *model.Post) error {
 	existing.Tags = post.Tags
 	existing.MetaTitle = post.MetaTitle
 	existing.MetaDescription = post.MetaDescription
+	existing.Thumbnail = post.Thumbnail
 
 	if existing.Status == model.Published && existing.PublishedAt == nil {
 		now := time.Now()
