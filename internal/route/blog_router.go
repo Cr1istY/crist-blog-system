@@ -1,7 +1,6 @@
 package route
 
 import (
-	"bytes"
 	"crist-blog/internal/handler"
 	"crist-blog/internal/middleware"
 	"crist-blog/internal/service"
@@ -10,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -35,52 +36,66 @@ func SetupBlogRouter(e *echo.Echo, postHandler *handler.PostHandler, authService
 	protected.DELETE("/delete/:id", postHandler.Delete)
 }
 
-// proxyImage 处理图片代理请求
+var allowedDomains = []string{
+	"th.bing.com",
+	"img.pconline.com.cn",
+}
+
+func isAllowedHost(host string) bool {
+	for _, allowed := range allowedDomains {
+		if host == allowed || strings.HasSuffix(host, "."+allowed) {
+			return true
+		}
+	}
+	return false
+}
+
 func proxyImage(c echo.Context) error {
-	// 获取目标图片URL
 	imageURL := c.QueryParam("url")
 	if imageURL == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing url parameter")
 	}
 
-	// 验证URL格式
-	_, err := url.ParseRequestURI(imageURL)
+	u, err := url.ParseRequestURI(imageURL)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid URL format")
 	}
 
-	// 创建HTTP请求
-	resp, err := http.Get(imageURL)
+	if !isAllowedHost(u.Host) {
+		return echo.NewHTTPError(http.StatusForbidden, "Domain not allowed")
+	}
+
+	// 创建带超时和 UA 的请求
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, _ := http.NewRequestWithContext(c.Request().Context(), "GET", imageURL, nil)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; ImageProxy/1.0)")
+	req.Header.Set("Referer", "https://www.bing.com/")
+
+	resp, err := client.Do(req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError,
-			fmt.Sprintf("Failed to fetch image: %v", err))
+		return echo.NewHTTPError(http.StatusBadGateway, "Failed to fetch image")
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}(resp.Body)
+	defer resp.Body.Close()
 
-	// 检查响应状态
 	if resp.StatusCode != http.StatusOK {
-		return echo.NewHTTPError(http.StatusInternalServerError,
-			fmt.Sprintf("Image server returned status: %d", resp.StatusCode))
+		return echo.NewHTTPError(http.StatusBadGateway,
+			fmt.Sprintf("Upstream returned %d", resp.StatusCode))
 	}
 
-	// 读取图片数据
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, resp.Body); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError,
-			fmt.Sprintf("Failed to read image data: %v", err))
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "image/") {
+		return echo.NewHTTPError(http.StatusUnsupportedMediaType, "Only images allowed")
 	}
 
 	// 设置响应头
-	c.Response().Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-	c.Response().Header().Set("Cache-Control", "public, max-age=3600") // 缓存1小时
+	c.Response().Header().Set("Content-Type", contentType)
+	c.Response().Header().Set("Cache-Control", "public, max-age=3600")
 
-	// 返回图片数据
-	return c.Stream(http.StatusOK, resp.Header.Get("Content-Type"),
-		bytes.NewReader(buf.Bytes()))
+	// 流式返回，不加载到内存
+	_, err = io.Copy(c.Response(), resp.Body)
+	if err != nil {
+		log.Printf("Warning: failed to stream image: %v", err)
+		// 无法返回错误（headers 已发送），只能记录
+	}
+	return nil
 }
