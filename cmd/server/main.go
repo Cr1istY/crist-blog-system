@@ -41,6 +41,10 @@ func main() {
 
 	e := echo.New()
 	e.Use(middleware.BodyLimit("10M"))
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"http://localhost:3000", "https://localhost:3000"},
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
+	}))
 	route.SetupUserRoutes(e, userHandler, authService)
 	route.SetupBlogRouter(e, postHandler, authService)
 	route.SetupCategoryRouter(e, categoryHandler)
