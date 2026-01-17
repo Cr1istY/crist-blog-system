@@ -3,6 +3,8 @@ package route
 import (
 	"bytes"
 	"crist-blog/internal/handler"
+	"crist-blog/internal/middleware"
+	"crist-blog/internal/service"
 	"fmt"
 	"io"
 	"log"
@@ -12,18 +14,23 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func SetupBlogRouter(e *echo.Echo, postHandler *handler.PostHandler) {
+func SetupBlogRouter(e *echo.Echo, postHandler *handler.PostHandler, authService *service.AuthService) {
 	api := e.Group("/api")
 	api.GET("/proxy/image", proxyImage)
+
+	// 公开路由
 	posts := api.Group("/posts")
-	posts.POST("/create", postHandler.CreatePost)
 	posts.GET("/getAllPosts", postHandler.ListToFrontend)
 	posts.GET("/get/:id", postHandler.GetBlogToViewers)
-	posts.PUT("/update/:id", postHandler.Update)
-	posts.DELETE("/delete/:id", postHandler.Delete)
 	posts.GET("/hot", postHandler.GetHotPosts)
 	posts.GET("/latest", postHandler.GetLatestPosts)
-	posts.POST("/create", postHandler.CreatePost)
+
+	// 需要认证的路由
+	protected := api.Group("/posts")
+	protected.Use(middleware.AuthMiddleware(authService))
+	protected.POST("/create", postHandler.CreatePost)
+	protected.PUT("/update/:id", postHandler.Update)
+	protected.DELETE("/delete/:id", postHandler.Delete)
 }
 
 // proxyImage 处理图片代理请求

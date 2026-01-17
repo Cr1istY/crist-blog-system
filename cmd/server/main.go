@@ -42,7 +42,7 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.BodyLimit("10M"))
 	route.SetupUserRoutes(e, userHandler, authService)
-	route.SetupBlogRouter(e, postHandler)
+	route.SetupBlogRouter(e, postHandler, authService)
 	route.SetupCategoryRouter(e, categoryHandler)
 	// Start server
 	port := os.Getenv("PORT")

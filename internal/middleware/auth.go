@@ -11,12 +11,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type Claims struct {
+	UserID string `json:"user_id"`
+	jwt.RegisteredClaims
+}
+
 func AuthMiddleware(authService *service.AuthService) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
-				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "authHeader == \"\""})
 			}
 			patrs := strings.Split(authHeader, " ")
 			if len(patrs) != 2 || patrs[0] != "Bearer" {

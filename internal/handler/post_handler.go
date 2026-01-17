@@ -113,12 +113,15 @@ func (h *PostHandler) GetBlogToViewers(c echo.Context) error {
 		Content:         post.Content,
 		Date:            dateStr,
 		Tags:            post.Tags,
+		CategoryID:      post.CategoryID,
 		Category:        categoryName,
 		Views:           post.Views,
 		Likes:           post.Likes,
 		Excerpt:         post.Excerpt,
+		Status:          post.Status,
 		MetaTitle:       post.MetaTitle,
 		MetaDescription: post.MetaDescription,
+		Thumbnail:       post.Thumbnail,
 	}
 	return c.JSON(http.StatusOK, postToViewers)
 }
@@ -134,23 +137,37 @@ func (h *PostHandler) Update(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
-
+	rawPost, err := h.postService.GetByID(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	title := utils.ExtractPostTitle(req.Content)
+	if title == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "title is empty"})
+	}
+	req.Title = title
+	req.MetaTitle = title
+	slug := utils.ToSlug(title)
+	req.Slug = slug
+	req.MetaDescription = req.Excerpt
 	post := &model.Post{
 		ID:              id,
-		UserID:          uuid.MustParse(req.UserID), // 注意：实际应从 token 获取，不应由前端传
+		UserID:          rawPost.UserID,
 		Title:           req.Title,
 		Slug:            req.Slug,
 		Content:         req.Content,
 		Excerpt:         req.Excerpt,
 		Status:          model.PostStatus(req.Status),
 		CategoryID:      uuid.MustParse(req.CategoryID),
+		Views:           rawPost.Views,
+		Likes:           rawPost.Likes,
 		Tags:            req.Tags,
 		MetaTitle:       req.MetaTitle,
 		MetaDescription: req.MetaDescription,
-		PublishedAt:     nil,
+		Thumbnail:       req.Thumbnail,
 	}
-	if req.PublishedAt != nil {
-		post.PublishedAt = req.PublishedAt
+	if rawPost.PublishedAt != nil {
+		post.PublishedAt = rawPost.PublishedAt
 	}
 
 	if err := h.postService.Update(post); err != nil {

@@ -101,15 +101,18 @@ func (Post) TableName() string {
 
 // PostDetail 是博客详情页返回给前端的数据结构
 type PostDetail struct {
-	ID              uint     `json:"id"`
-	Title           string   `json:"title"`
-	Content         string   `json:"content"` // Markdown 原文
-	Date            string   `json:"date"`    // 格式化后的发布日期，如 "2025年12月15日"
-	Tags            []string `json:"tags"`
-	Category        string   `json:"category"` // 分类名称，非 ID
-	Views           int      `json:"views"`
-	Likes           int      `json:"likes"`
-	Excerpt         string   `json:"excerpt,omitempty"`
-	MetaTitle       string   `json:"meta_title,omitempty"`
-	MetaDescription string   `json:"meta_description,omitempty"`
+	ID              uint       `json:"id"`
+	Title           string     `json:"title"`
+	Content         string     `json:"content"` // Markdown 原文
+	Date            string     `json:"date"`    // 格式化后的发布日期，如 "2025年12月15日"
+	Tags            []string   `json:"tags"`
+	CategoryID      uuid.UUID  `gorm:"type:uuid;not null" json:"category_id"`
+	Category        string     `json:"category"` // 分类名称，非 ID
+	Views           int        `json:"views"`
+	Likes           int        `json:"likes"`
+	Excerpt         string     `json:"excerpt,omitempty"`
+	MetaTitle       string     `json:"meta_title,omitempty"`
+	MetaDescription string     `json:"meta_description,omitempty"`
+	Status          PostStatus `gorm:"type:post_status_enum;not null" json:"status"`
+	Thumbnail       string     `json:"thumbnail"`
 }
