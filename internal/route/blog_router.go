@@ -37,6 +37,7 @@ func SetupBlogRouter(e *echo.Echo, postHandler *handler.PostHandler, authService
 }
 
 var allowedDomains = []string{
+	"www.bing.com",
 	"th.bing.com",
 	"gd-hbimg.huaban.com",
 	"image-assets.soutushenqi.com",
