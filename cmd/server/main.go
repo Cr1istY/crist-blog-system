@@ -44,6 +44,7 @@ func main() {
 
 	postHandler := handler.NewPostHandler(postService, categoryService)
 	userHandler := handler.NewUserHandler(authService, userService)
+	imageHandler := handler.NewImageHandler(redis)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 
 	e := echo.New()
@@ -53,7 +54,7 @@ func main() {
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
 	}))
 	route.SetupUserRoutes(e, userHandler, authService)
-	route.SetupBlogRouter(e, postHandler, authService)
+	route.SetupBlogRouter(e, postHandler, imageHandler, authService)
 	route.SetupCategoryRouter(e, categoryHandler)
 	// Start server
 	port := os.Getenv("PORT")
