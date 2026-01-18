@@ -22,7 +22,8 @@ func SetupBlogRouter(e *echo.Echo, postHandler *handler.PostHandler, authService
 	// 公开路由
 	posts := api.Group("/posts")
 	posts.GET("/getAllPosts", postHandler.ListToFrontend)
-	posts.GET("/get/:id", postHandler.GetBlogToViewers)
+	posts.GET("/get/:id", postHandler.GetBlogByIdToViewers)
+	posts.GET("/getBySlug/:slug", postHandler.GetBlogBySlug)
 	posts.GET("/hot", postHandler.GetHotPosts)
 	posts.GET("/latest", postHandler.GetLatestPosts)
 	posts.GET("/addViews/:id", postHandler.AddViews)
@@ -39,7 +40,6 @@ func SetupBlogRouter(e *echo.Echo, postHandler *handler.PostHandler, authService
 var allowedDomains = []string{
 	"www.bing.com",
 	"th.bing.com",
-	"gd-hbimg.huaban.com",
 	"image-assets.soutushenqi.com",
 	"i0.hdslb.com",
 }

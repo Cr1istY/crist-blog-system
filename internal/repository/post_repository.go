@@ -24,6 +24,12 @@ func (r *PostRepository) GetByID(id uint) (*model.Post, error) {
 	return &post, err
 }
 
+func (r *PostRepository) GetBySlug(slug string) (*model.Post, error) {
+	var post model.Post
+	err := r.DB.Where("slug = ?", slug).First(&post).Error
+	return &post, err
+}
+
 func (r *PostRepository) Update(post *model.Post) error {
 	return r.DB.Save(post).Error
 }

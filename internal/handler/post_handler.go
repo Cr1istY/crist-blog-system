@@ -81,7 +81,7 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{"message": "Post created successfully", "id": post.ID})
 }
 
-func (h *PostHandler) Get(c echo.Context) error {
+func (h *PostHandler) GetBlogById(c echo.Context) error {
 	idStr := c.Param("id")
 	id64, err := strconv.ParseUint(idStr, 10, 64)
 	id := uint(id64)
@@ -92,14 +92,7 @@ func (h *PostHandler) Get(c echo.Context) error {
 	return c.JSON(http.StatusOK, post)
 }
 
-func (h *PostHandler) GetBlogToViewers(c echo.Context) error {
-	idStr := c.Param("id")
-	id64, err := strconv.ParseUint(idStr, 10, 64)
-	id := uint(id64)
-	post, err := h.postService.GetByID(id)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
-	}
+func (h *PostHandler) uniformizePostToViewers(post *model.Post) *model.PostDetail {
 	dateStr := ""
 	if post.PublishedAt != nil {
 		// 格式：2025年12月15日
@@ -130,6 +123,28 @@ func (h *PostHandler) GetBlogToViewers(c echo.Context) error {
 		MetaDescription: post.MetaDescription,
 		Thumbnail:       post.Thumbnail,
 	}
+	return postToViewers
+}
+
+func (h *PostHandler) GetBlogBySlug(c echo.Context) error {
+	slug := c.Param("slug")
+	post, err := h.postService.GetBySlug(slug)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	postToViewers := h.uniformizePostToViewers(post)
+	return c.JSON(http.StatusOK, postToViewers)
+}
+
+func (h *PostHandler) GetBlogByIdToViewers(c echo.Context) error {
+	idStr := c.Param("id")
+	id64, err := strconv.ParseUint(idStr, 10, 64)
+	id := uint(id64)
+	post, err := h.postService.GetByID(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	postToViewers := h.uniformizePostToViewers(post)
 	return c.JSON(http.StatusOK, postToViewers)
 }
 
@@ -199,6 +214,7 @@ func (h *PostHandler) Delete(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// List 已弃用 见ListToFrontend
 func (h *PostHandler) List(c echo.Context) error {
 	posts, err := h.postService.List()
 	if err != nil {
@@ -225,6 +241,7 @@ func (h *PostHandler) ListToFrontend(c echo.Context) error {
 		}
 		blogPosts = append(blogPosts, &model.PostFrontend{
 			ID:        post.ID,
+			Slug:      post.Slug,
 			Title:     post.Title,
 			Tags:      post.Tags,
 			Date:      post.PublishedAt.Format("2006-01-02"),

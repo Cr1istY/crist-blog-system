@@ -56,6 +56,7 @@ type CreatePostRequest struct {
 
 type PostFrontend struct {
 	ID        uint     `json:"id"`
+	Slug      string   `json:"slug" validate:"required"`
 	Title     string   `json:"title"`
 	Tags      []string `json:"tags"`
 	Date      string   `json:"date"`
