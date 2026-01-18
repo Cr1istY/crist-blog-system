@@ -21,10 +21,17 @@ func main() {
 	bytes := make([]byte, 64)
 	_, err := rand.Read(bytes)
 	if err != nil {
+		log.Fatal("Failed to generate JWT secret")
 	}
 	jwtSecret := base64.URLEncoding.EncodeToString(bytes)
 
 	db := blogConfig.ConnectDB()
+	redis := blogConfig.ConnectRedis()
+	defer func() {
+		if redis != nil {
+			_ = redis.Close()
+		}
+	}()
 	userRepo := repository.NewUserRepository(db)
 	authRepo := repository.NewRefreshTokenRepository(db)
 	postRepo := repository.NewPostRepository(db)
