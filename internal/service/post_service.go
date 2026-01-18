@@ -28,6 +28,10 @@ func (s *PostService) GetByID(id uint) (*model.Post, error) {
 	return s.PostRepo.GetByID(id)
 }
 
+func (s *PostService) GetBySlug(slug string) (*model.Post, error) {
+	return s.PostRepo.GetBySlug(slug)
+}
+
 func (s *PostService) Update(post *model.Post) error {
 	existing, err := s.GetByID(post.ID)
 	if err != nil {

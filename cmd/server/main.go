@@ -21,10 +21,17 @@ func main() {
 	bytes := make([]byte, 64)
 	_, err := rand.Read(bytes)
 	if err != nil {
+		log.Fatal("Failed to generate JWT secret")
 	}
 	jwtSecret := base64.URLEncoding.EncodeToString(bytes)
 
 	db := blogConfig.ConnectDB()
+	redis := blogConfig.ConnectRedis()
+	defer func() {
+		if redis != nil {
+			_ = redis.Close()
+		}
+	}()
 	userRepo := repository.NewUserRepository(db)
 	authRepo := repository.NewRefreshTokenRepository(db)
 	postRepo := repository.NewPostRepository(db)
@@ -37,6 +44,7 @@ func main() {
 
 	postHandler := handler.NewPostHandler(postService, categoryService)
 	userHandler := handler.NewUserHandler(authService, userService)
+	imageHandler := handler.NewImageHandler(redis)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 
 	e := echo.New()
@@ -46,7 +54,7 @@ func main() {
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
 	}))
 	route.SetupUserRoutes(e, userHandler, authService)
-	route.SetupBlogRouter(e, postHandler, authService)
+	route.SetupBlogRouter(e, postHandler, imageHandler, authService)
 	route.SetupCategoryRouter(e, categoryHandler)
 	// Start server
 	port := os.Getenv("PORT")
