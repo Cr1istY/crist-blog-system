@@ -7,6 +7,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
+
 	"io"
 	"log"
 	"net/http"
@@ -14,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/disintegration/imaging"
 	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 )
@@ -26,9 +31,14 @@ func NewImageHandler(rdb *redis.Client) *ImageHandler {
 	return &ImageHandler{rdb: rdb}
 }
 
-func generateCacheKey(imageURL string) string {
+func generateCacheKey(imageURL, imageQuality string) string {
+	if imageQuality == "" {
+		hash := sha256.Sum256([]byte(imageURL))
+		return "image_proxy:" + hex.EncodeToString(hash[:])
+	}
+	prefix := "image_proxy" + "_" + imageQuality + ":"
 	hash := sha256.Sum256([]byte(imageURL))
-	return "image_proxy:" + hex.EncodeToString(hash[:])
+	return prefix + hex.EncodeToString(hash[:])
 }
 
 // isLikelyImage 通过文件头魔数判断是否为常见图片格式
@@ -59,6 +69,55 @@ func isLikelyImage(data []byte) bool {
 	return false
 }
 
+func compressImage(data []byte, quality string) ([]byte, string, error) {
+	img, format, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, "", err
+	}
+	maxHeight, maxWidth := -1, -1
+	switch quality {
+	case "low":
+		maxWidth, maxHeight = 320, 180
+	case "medium":
+		maxWidth, maxHeight = 1200, 800
+	case "high":
+		maxWidth, maxHeight = 1920, 1080
+	default:
+		// 不处理
+	}
+
+	if maxWidth > 0 {
+		bounds := img.Bounds()
+		origW, origH := bounds.Dx(), bounds.Dy()
+
+		if origW > maxWidth || origH > maxHeight {
+			img = imaging.Fit(img, maxWidth, maxHeight, imaging.Lanczos)
+			format = "jpeg"
+		}
+	}
+	buf := new(bytes.Buffer)
+	var contentType string
+
+	if format == "png" {
+		// PNG: 使用 BestCompression
+		encoder := png.Encoder{CompressionLevel: png.BestCompression}
+		if err := encoder.Encode(buf, img); err != nil {
+			return nil, "", err
+		}
+		contentType = "image/png"
+	} else {
+		// 默认转为 JPEG（包括原 JPEG、GIF、BMP 等）
+		// 可根据需要设置质量，这里固定 85（平衡质量与体积）
+		opts := &jpeg.Options{Quality: 85}
+		if err := jpeg.Encode(buf, img, opts); err != nil {
+			return nil, "", err
+		}
+		contentType = "image/jpeg"
+	}
+
+	return buf.Bytes(), contentType, nil
+}
+
 func (h *ImageHandler) ProxyImage(c echo.Context) error {
 	const (
 		defaultCacheTTL   = 24 * time.Hour
@@ -68,6 +127,7 @@ func (h *ImageHandler) ProxyImage(c echo.Context) error {
 	)
 
 	imageURL := c.QueryParam("url")
+	imageQuality := c.QueryParam("quality")
 	if imageURL == "" {
 		c.Response().Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing url parameter")
@@ -94,7 +154,7 @@ func (h *ImageHandler) ProxyImage(c echo.Context) error {
 	}
 
 	// 生成缓存键
-	cacheKey := generateCacheKey(imageURL)
+	cacheKey := generateCacheKey(imageURL, imageQuality)
 	ctx := c.Request().Context()
 
 	// 1. 尝试从 Redis 获取缓存
@@ -163,6 +223,19 @@ func (h *ImageHandler) ProxyImage(c echo.Context) error {
 		log.Printf("Body does not appear to be a valid image despite content-type '%s' from %s", contentType, imageURL)
 		c.Response().Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		return echo.NewHTTPError(http.StatusUnsupportedMediaType, "Invalid or corrupted image data")
+	}
+
+	// 图片压缩处理
+	if imageQuality != "" {
+		compressedBody, newFormat, err := compressImage(body, imageQuality)
+		if err != nil {
+			log.Printf("Failed to compress image from %s: %v", imageURL, err)
+		} else {
+			if len(compressedBody) < len(body) {
+				body = compressedBody
+				contentType = newFormat
+			}
+		}
 	}
 
 	// 仅有效图片才异步写入 Redis
