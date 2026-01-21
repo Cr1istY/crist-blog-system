@@ -9,6 +9,9 @@ var allowedDomains = []string{
 	"th.bing.com",
 	"image-assets.soutushenqi.com",
 	"i0.hdslb.com",
+	"c-ssl.duitang.com",
+	"gd-hbimg.huaban.com",
+	"pic.rmb.bdstatic.com",
 }
 
 func IsAllowedHost(host string) bool {
