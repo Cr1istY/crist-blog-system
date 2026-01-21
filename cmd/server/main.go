@@ -63,5 +63,5 @@ func main() {
 	}
 
 	log.Println("🚀 Server is running on port", port)
-	e.Logger.Fatal(e.Start(":" + port))
+	e.Logger.Fatal(e.Start("127.0.0.1:" + port))
 }
