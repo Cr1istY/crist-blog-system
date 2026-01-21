@@ -96,7 +96,7 @@ func (h *PostHandler) uniformizePostToViewers(post *model.Post) *model.PostDetai
 	dateStr := ""
 	if post.PublishedAt != nil {
 		// 格式：2025年12月15日
-		dateStr = post.PublishedAt.Format("2006-1-2")
+		dateStr = post.UpdatedAt.Format("2006-1-2")
 	} else {
 		dateStr = post.CreatedAt.Format("2006-1-2")
 	}
