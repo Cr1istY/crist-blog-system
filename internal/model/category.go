@@ -28,8 +28,17 @@ type CreateCategory struct {
 }
 
 type UpdateCategory struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	ParentID    uuid.UUID `json:"parent_id"`
+}
+
+type CategoryToFrontend struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
+	Description string    `json:"description"`
 }
 
 func (C *Category) TableName() string {
