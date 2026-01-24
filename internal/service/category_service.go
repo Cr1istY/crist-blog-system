@@ -3,6 +3,7 @@ package service
 import (
 	"crist-blog/internal/model"
 	"crist-blog/internal/repository"
+	"errors"
 
 	"github.com/google/uuid"
 )
@@ -29,7 +30,7 @@ func (s *CategoryService) CreateCategory(category *model.Category) error {
 	return s.CategoryRepo.CreateCategory(category)
 }
 
-func (s *CategoryService) CreatCategories(categories []model.Category) error {
+func (s *CategoryService) CreateCategories(categories []model.Category) error {
 	return s.CategoryRepo.CreatCategories(categories)
 }
 
@@ -41,11 +42,14 @@ func (s *CategoryService) DeleteCategory(id uuid.UUID) error {
 	return s.CategoryRepo.DeleteCategory(id)
 }
 
-func (s *CategoryService) UpdateCategory(id uuid.UUID, category *model.Category) error {
-	return s.CategoryRepo.UpdateCategory(id, category)
+func (s *CategoryService) UpdateCategory(category *model.Category) error {
+	return s.CategoryRepo.UpdateCategory(category)
 }
 
 func (s *CategoryService) AddParentCategory(parentId, sonId uuid.UUID) error {
+	if parentId == sonId {
+		return errors.New("parentId and sonId cannot be the same")
+	}
 	return s.CategoryRepo.AddParentCategory(parentId, sonId)
 }
 

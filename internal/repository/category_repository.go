@@ -66,19 +66,22 @@ func (r *CategoryRepository) DeleteCategory(id uuid.UUID) error {
 }
 
 // UpdateCategory 更新分类
-func (r *CategoryRepository) UpdateCategory(id uuid.UUID, category *model.Category) error {
-	_, err := r.GetCategoryByID(id)
+func (r *CategoryRepository) UpdateCategory(category *model.Category) error {
+	_, err := r.GetCategoryByID(category.ID)
 	if err != nil {
 		return errors.New("category not found")
 	}
 	err = r.DB.Model(&model.Category{}).
-		Where("id = ?", id).
+		Where("id = ?", category.ID).
 		Updates(category).Error
 	return err
 }
 
 // AddParentCategory 给分类添加父分类
 func (r *CategoryRepository) AddParentCategory(parentId, sonId uuid.UUID) error {
+	if parentId == sonId {
+		return errors.New("parentId and sonId cannot be the same")
+	}
 	_, err := r.GetCategoryByID(parentId)
 	if err != nil {
 		return errors.New("parent category not found")
