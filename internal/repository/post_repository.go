@@ -46,7 +46,7 @@ func (r *PostRepository) List() ([]*model.Post, error) {
 func (r *PostRepository) GetHotPost() ([]*model.HotPost, error) {
 	var hotPosts []*model.HotPost
 	err := r.DB.Model(&model.Post{}).
-		Select("id, title, category_id, created_at, excerpt").
+		Select("slug, title, category_id, created_at, excerpt").
 		Where("status = ?", model.Published).
 		Order("likes desc").
 		Limit(2).
@@ -57,7 +57,7 @@ func (r *PostRepository) GetHotPost() ([]*model.HotPost, error) {
 func (r *PostRepository) GetLatestPosts() ([]*model.LatestPost, error) {
 	var latestPosts []*model.LatestPost
 	err := r.DB.Model(&model.Post{}).
-		Select("id, title, category_id, created_at").
+		Select("slug, title, category_id, created_at").
 		Where("status = ?", model.Published).
 		Order("created_at desc").
 		Limit(2).

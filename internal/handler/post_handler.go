@@ -266,7 +266,7 @@ func (h *PostHandler) GetHotPosts(c echo.Context) error {
 			category = "未分类"
 		}
 		blogPosts = append(blogPosts, &model.HotPostFrontend{
-			ID:       post.ID,
+			Slug:     post.Slug,
 			Title:    post.Title,
 			Category: category,
 			Date:     post.CreatedAt.Format("2006-01-02"),
@@ -288,7 +288,7 @@ func (h *PostHandler) GetLatestPosts(c echo.Context) error {
 			category = "未分类"
 		}
 		blogPosts = append(blogPosts, &model.LatestPostFrontend{
-			ID:       post.ID,
+			Slug:     post.Slug,
 			Title:    post.Title,
 			Category: category,
 			Date:     post.CreatedAt.Format("2006-01-02"),

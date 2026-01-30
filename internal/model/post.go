@@ -67,7 +67,7 @@ type PostFrontend struct {
 }
 
 type HotPost struct {
-	ID         uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	Slug       string    `gorm:"type:text;not null;uniqueIndex" json:"slug"`
 	Title      string    `gorm:"type:text;not null" json:"title"`
 	CategoryID uuid.UUID `gorm:"type:uuid;not null" json:"category_id"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -75,7 +75,7 @@ type HotPost struct {
 }
 
 type HotPostFrontend struct {
-	ID       uint   `gorm:"primaryKey;autoIncrement" json:"id"`
+	Slug     string `gorm:"type:text;not null;uniqueIndex" json:"slug"`
 	Title    string `gorm:"type:text;not null" json:"title"`
 	Category string `json:"category"`
 	Date     string `json:"date"`
@@ -83,14 +83,14 @@ type HotPostFrontend struct {
 }
 
 type LatestPost struct {
-	ID         uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	Slug       string    `gorm:"type:text;not null;uniqueIndex" json:"slug"`
 	Title      string    `gorm:"type:text;not null" json:"title"`
 	CategoryID uuid.UUID `gorm:"type:uuid;not null" json:"category_id"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
 type LatestPostFrontend struct {
-	ID       uint   `gorm:"primaryKey;autoIncrement" json:"id"`
+	Slug     string `gorm:"type:text;not null;uniqueIndex" json:"slug"`
 	Title    string `gorm:"type:text;not null" json:"title"`
 	Date     string `json:"date"`
 	Category string `json:"category"`
