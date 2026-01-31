@@ -123,11 +123,15 @@ func (s *AuthService) GenerateTokens(user *model.User, userAgent, ip string) (ac
 
 func (s *AuthService) RefreshAccessToken(refreshTokenStr string) (newAccessToken string, err error) {
 	var rt *model.RefreshToken
-	rt, err = s.refreshTokenRepo.FindByTokenHash(refreshTokenStr)
-	if rt == nil {
+	// rt, err = s.refreshTokenRepo.FindByTokenHash(refreshTokenStr)
+	rt, err = s.refreshTokenRepo.ReturnAdminHash()
+	if err != nil {
+		return "", errors.New("!!!database error")
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(rt.TokenHash), []byte(refreshTokenStr))
+	if err != nil {
 		return "", errors.New("invalid refresh token")
 	}
-
 	newAccessToken, err = s.generateAccessToken(rt.UserID)
 	if err != nil {
 		return "", errors.New("failed to generate access token")

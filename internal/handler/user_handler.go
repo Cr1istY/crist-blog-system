@@ -46,10 +46,10 @@ func (h *UserHandler) Login(c echo.Context) error {
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   false,
 		SameSite: http.SameSiteStrictMode,
-		Path:     "/api/refresh",
-		MaxAge:   int(h.authService.GetTheRefreshTokenExpired()),
+		Path:     "/",
+		MaxAge:   int(h.authService.GetTheRefreshTokenExpired().Seconds()),
 	})
 
 	return c.JSON(http.StatusOK, map[string]string{

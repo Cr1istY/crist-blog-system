@@ -55,7 +55,7 @@ func main() {
 	}))
 	route.SetupUserRoutes(e, userHandler, authService)
 	route.SetupBlogRouter(e, postHandler, imageHandler, authService)
-	route.SetupCategoryRouter(e, categoryHandler)
+	route.SetupCategoryRouter(e, categoryHandler, authService)
 	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {

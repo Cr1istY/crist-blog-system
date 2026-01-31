@@ -17,8 +17,9 @@ type Category struct {
 }
 
 type CreatePostCategory struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
+	ID       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	ParentID uuid.UUID `json:"parent_id"`
 }
 
 type CreateCategory struct {

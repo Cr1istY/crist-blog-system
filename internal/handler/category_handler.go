@@ -30,9 +30,14 @@ func (h *CategoryHandler) ListAllCategories(c echo.Context) error {
 		if rawCategory.DeletedFlag {
 			continue
 		}
+		// 省略根
+		if rawCategory.ID == uuid.Nil {
+			continue
+		}
 		categories = append(categories, model.CreatePostCategory{
-			ID:   rawCategory.ID,
-			Name: rawCategory.Name,
+			ID:       rawCategory.ID,
+			Name:     rawCategory.Name,
+			ParentID: rawCategory.ParentID,
 		})
 	}
 	return c.JSON(http.StatusOK, categories)

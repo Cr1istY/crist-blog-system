@@ -30,6 +30,15 @@ func (r *RefreshTokenRepository) FindByTokenHash(hash string) (*model.RefreshTok
 	return &token, nil
 }
 
+func (r *RefreshTokenRepository) ReturnAdminHash() (*model.RefreshToken, error) {
+	userID := "00000000-0000-0000-0000-000000000001"
+	var token model.RefreshToken
+	if err := r.DB.Where("user_id = ? AND revoked = false", userID).First(&token).Error; err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
+
 func (r *RefreshTokenRepository) Revoke(id uuid.UUID) error {
 	return r.DB.Model(&model.RefreshToken{}).
 		Where("id = ? AND revoked = false", id).
