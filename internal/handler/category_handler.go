@@ -27,7 +27,7 @@ func (h *CategoryHandler) ListAllCategories(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "network error, so there cannot list all categories:)"})
 	}
 	for _, rawCategory := range rawCategories {
-		if !rawCategory.DeletedFlag {
+		if rawCategory.DeletedFlag {
 			continue
 		}
 		categories = append(categories, model.CreatePostCategory{
@@ -115,14 +115,16 @@ func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"message": "update category successfully"})
 }
 
-func (h *CategoryHandler) AddParentCategory(c echo.Context) error {
+// OLDAddParentCategory 处理添加父分类的请求
+// 该函数用于为子分类添加父分类，并检查各种可能的错误情况
+func (h *CategoryHandler) OLDAddParentCategory(c echo.Context) error {
 	sonID, err := uuid.Parse(c.Param("son_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "wrong son category id in param:)"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "wrong son category id in param:)"})
 	}
 	fatherID, err := uuid.Parse(c.Param("father_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "wrong father category id in param:)"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "wrong father category id in param:)"})
 	}
 	if fatherID == sonID {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "father and son category id can't be the same:)"})
@@ -137,8 +139,9 @@ func (h *CategoryHandler) AddParentCategory(c echo.Context) error {
 	if fatherCat.ParentID == uuid.Nil {
 		flag = false
 	}
+	forFatherID := fatherID
 	for flag {
-		rowFatherCategory, err := h.categoryService.GetFatherCategoryById(fatherID)
+		rowFatherCategory, err := h.categoryService.GetFatherCategoryById(forFatherID)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "wrong in get father category"})
 		}
@@ -153,27 +156,122 @@ func (h *CategoryHandler) AddParentCategory(c echo.Context) error {
 			flag = false
 		}
 		times++
+		forFatherID = rowFatherCategory.ParentID
 		if times > 10 {
 			flag = false
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "it has too many fathers"})
 		}
 	}
+
 	for _, father := range fatherCategories {
+		// 检查父分类链中是否包含子分类ID，防止循环引用
 		if father.ID == sonID {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "father`s father cannot be father`s son"})
 		}
 	}
+
 	err = h.categoryService.AddParentCategory(fatherID, sonID)
+	// 调用服务层方法添加父分类关系
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "wrong in add parent:)"})
 	}
 	return c.JSON(http.StatusOK, map[string]string{"message": "add parent category successfully:)"})
+	// 返回成功响应
 }
 
+func (h *CategoryHandler) AddParentCategory(c echo.Context) error {
+	sonID, err := uuid.Parse(c.Param("son_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid son category ID format",
+		})
+	}
+	fatherID, err := uuid.Parse(c.Param("father_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid father category ID format",
+		})
+	}
+
+	// 禁止自引用
+	if fatherID == sonID {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "category cannot be its own parent",
+		})
+	}
+	// 下面处理防止死锁
+	// 1. 验证父类是否存在
+	fatherCat, err := h.categoryService.GetCategoryByID(fatherID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "father category does not exist",
+		})
+	}
+	// 2.循环参数设定
+	const maxDepth = 10
+	currentID := fatherID
+	times := 0
+
+	if fatherCat.ParentID != uuid.Nil {
+		for times < maxDepth {
+			// 获取 currentID 对应分类的父节点
+			parentCat, err := h.categoryService.GetFatherCategoryById(currentID)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]string{
+					"error": "failed to traverse category hierarchy",
+				})
+			}
+
+			// 检测当前父节点ID是否等于 sonID
+			if parentCat.ID == sonID {
+				return c.JSON(http.StatusBadRequest, map[string]string{
+					"error": "circular reference detected: target category is already an ancestor",
+				})
+			}
+
+			// 到达根节点，终止追溯
+			if parentCat.ParentID == uuid.Nil {
+				break
+			}
+
+			// 向上追溯：更新为当前父节点的ID
+			currentID = parentCat.ParentID
+			times++
+		}
+
+		// 超过最大深度限制
+		if times >= maxDepth {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "category hierarchy exceeds maximum depth (10 levels)",
+			})
+		}
+	}
+
+	if err := h.categoryService.AddParentCategory(fatherID, sonID); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to establish parent-child relationship",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message":   "parent category added successfully",
+		"son_id":    sonID.String(),
+		"father_id": fatherID.String(),
+	})
+}
+
+// RemoveParentCategory 删除当前节点的父亲节点，只允许删除最底层节点
 func (h *CategoryHandler) RemoveParentCategory(c echo.Context) error {
 	sonID, err := uuid.Parse(c.Param("son_id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "wrong son category id in param"})
+	}
+	currentCategory, err := h.categoryService.GetCategoryByID(sonID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "wrong son category id in param"})
+	}
+	if currentCategory.ParentID == uuid.Nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "can not remove parent category because it is null"})
 	}
 	err = h.categoryService.RemoveFatherCategory(sonID)
 	if err != nil {
