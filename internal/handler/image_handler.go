@@ -183,7 +183,7 @@ func (h *ImageHandler) ProxyImage(c echo.Context) error {
 
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0")
-	// ⚠️ 关键：完全不设置 Referer 头
+	// 当前缀为以下时，只有用b站头进入才能申请到图片。。。
 	if parsedURL.Host == "i0.hdslb.com" {
 		req.Header.Set("Referer", "https://www.bilibili.com/")
 	}
