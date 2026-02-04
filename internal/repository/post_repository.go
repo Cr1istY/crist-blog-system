@@ -2,6 +2,7 @@ package repository
 
 import (
 	"crist-blog/internal/model"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -71,4 +72,41 @@ func (r *PostRepository) AddViews(id uint) error {
 
 func (r *PostRepository) AddLikes(id uint) error {
 	return r.DB.Model(&model.Post{}).Where("id = ?", id).UpdateColumn("likes", gorm.Expr("likes + ?", 1)).Error
+}
+
+func (r *PostRepository) PinPost(id uint, pinnedOrder int, pinedUntil *time.Time) error {
+	updates := map[string]interface{}{
+		"is_pinned":    true,
+		"pinned_order": pinnedOrder,
+	}
+	if pinedUntil != nil {
+		updates["pinned_until"] = *pinedUntil
+	} else {
+		updates["pinned_until"] = gorm.Expr("NULL")
+	}
+	return r.DB.Model(&model.Post{}).
+		Where("id = ? AND deleted_at IS NULL", id).
+		Updates(updates).Error
+}
+
+func (r *PostRepository) UnpinPost(id uint) error {
+	return r.DB.Model(&model.Post{}).
+		Where("id = ? AND deleted_at IS NULL", id).
+		Updates(map[string]interface{}{
+			"is_pinned":    false,
+			"pinned_order": 0,
+			"pinned_until": gorm.Expr("NULL"),
+		}).Error
+}
+
+func (r *PostRepository) ClearExpiredPins() (int64, error) {
+	now := time.Now()
+	result := r.DB.Model(&model.Post{}).
+		Where("is_pinned = ? AND pinned_until IS NOT NULL AND pinned_until <= ?", true, now).
+		Updates(map[string]interface{}{
+			"is_pinned":    false,
+			"pinned_order": 0,
+			"pinned_until": gorm.Expr("NULL"),
+		})
+	return result.RowsAffected, result.Error
 }

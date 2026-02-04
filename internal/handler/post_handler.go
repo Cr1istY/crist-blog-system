@@ -122,11 +122,22 @@ func (h *PostHandler) uniformizePostToViewers(post *model.Post) *model.PostDetai
 		MetaTitle:       post.MetaTitle,
 		MetaDescription: post.MetaDescription,
 		Thumbnail:       post.Thumbnail,
+		IsPinned:        post.IsPinned,
 	}
 	return postToViewers
 }
 
 func (h *PostHandler) GetBlogBySlug(c echo.Context) error {
+	slug := c.Param("slug")
+	post, err := h.postService.GetBySlug(slug)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	postToViewers := h.uniformizePostToViewers(post)
+	return c.JSON(http.StatusOK, postToViewers)
+}
+
+func (h *PostHandler) GetBlogBySlugWithPinned(c echo.Context) error {
 	slug := c.Param("slug")
 	post, err := h.postService.GetBySlug(slug)
 	if err != nil {
@@ -254,6 +265,35 @@ func (h *PostHandler) ListToFrontend(c echo.Context) error {
 	return c.JSON(http.StatusOK, blogPosts)
 }
 
+func (h *PostHandler) ListToFrontendWithPinned(c echo.Context) error {
+	posts, err := h.postService.List()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	var blogPosts []*model.PostFrontendWithPinned
+	for _, post := range posts {
+		if post.Status != model.Published {
+			continue
+		}
+		if post.Thumbnail == "" {
+			post.Thumbnail = assets.GetThumbnail()
+		}
+		blogPosts = append(blogPosts, &model.PostFrontendWithPinned{
+			Slug:        post.Slug,
+			Title:       post.Title,
+			Tags:        post.Tags,
+			Date:        post.PublishedAt.Format("2006-01-02"),
+			Excerpt:     post.Excerpt,
+			Views:       post.Views,
+			Likes:       post.Likes,
+			Thumbnail:   post.Thumbnail,
+			IsPinned:    post.IsPinned,
+			PinnedOrder: post.PinnedOrder,
+		})
+	}
+	return c.JSON(http.StatusOK, blogPosts)
+}
+
 func (h *PostHandler) GetHotPosts(c echo.Context) error {
 	posts, err := h.postService.GetHotPosts()
 	if err != nil {
@@ -321,4 +361,31 @@ func (h *PostHandler) AddLikes(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]string{"message": "Likes added successfully"})
+}
+
+func (h *PostHandler) PinPost(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid post ID"})
+	}
+	// TODO 实装 pinnedOrder, PinedUntil
+	err = h.postService.PinPost(uint(id), 1, nil)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "database error"})
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": "Post pinned successfully"})
+}
+
+func (h *PostHandler) UnpinPost(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid post ID"})
+	}
+	err = h.postService.UnpinPost(uint(id))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "database error"})
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": "Post unpinned successfully"})
 }

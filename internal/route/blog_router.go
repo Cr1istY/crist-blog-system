@@ -14,7 +14,7 @@ func SetupBlogRouter(e *echo.Echo, postHandler *handler.PostHandler, imageHandle
 
 	// 公开路由
 	posts := api.Group("/posts")
-	posts.GET("/getAllPosts", postHandler.ListToFrontend)
+	posts.GET("/getAllPosts", postHandler.ListToFrontendWithPinned)
 	posts.GET("/get/:id", postHandler.GetBlogByIdToViewers)
 	posts.GET("/getBySlug/:slug", postHandler.GetBlogBySlug)
 	posts.GET("/hot", postHandler.GetHotPosts)
@@ -28,4 +28,6 @@ func SetupBlogRouter(e *echo.Echo, postHandler *handler.PostHandler, imageHandle
 	protected.POST("/create", postHandler.CreatePost)
 	protected.PUT("/update/:id", postHandler.Update)
 	protected.DELETE("/delete/:id", postHandler.Delete)
+	protected.PUT("/pin/:id", postHandler.PinPost)
+	protected.PUT("/unpin/:id", postHandler.UnpinPost)
 }

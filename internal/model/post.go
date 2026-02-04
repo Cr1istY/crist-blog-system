@@ -36,6 +36,9 @@ type Post struct {
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	IsPinned        bool           `gorm:"default:false;not null" json:"is_pinned"`        // 置顶开关
+	PinnedOrder     int            `gorm:"default:0;not null" json:"pinned_order"`         // 置顶内排序
+	PinnedUntil     *time.Time     `gorm:"type:timestamptz" json:"pinned_until,omitempty"` // 过期时间（可空）
 }
 
 // CreatePostRequest 创建文章请求结构体
@@ -64,6 +67,19 @@ type PostFrontend struct {
 	Views     int      `gorm:"default:0" json:"views"`
 	Likes     int      `gorm:"default:0" json:"likes"`
 	Thumbnail string   `json:"thumbnail,omitempty"`
+}
+
+type PostFrontendWithPinned struct {
+	Slug        string   `json:"slug" validate:"required"`
+	Title       string   `json:"title"`
+	Tags        []string `json:"tags"`
+	Date        string   `json:"date"`
+	Excerpt     string   `json:"excerpt"`
+	Views       int      `gorm:"default:0" json:"views"`
+	Likes       int      `gorm:"default:0" json:"likes"`
+	Thumbnail   string   `json:"thumbnail,omitempty"`
+	IsPinned    bool     `gorm:"default:false;not null" json:"is_pinned"` // 置顶开关
+	PinnedOrder int      `gorm:"default:0;not null" json:"pinned_order"`  // 置顶内排序
 }
 
 type HotPost struct {
@@ -116,4 +132,5 @@ type PostDetail struct {
 	MetaDescription string     `json:"meta_description,omitempty"`
 	Status          PostStatus `gorm:"type:post_status_enum;not null" json:"status"`
 	Thumbnail       string     `json:"thumbnail"`
+	IsPinned        bool       `gorm:"default:false;not null" json:"is_pinned"` // 置顶开关
 }

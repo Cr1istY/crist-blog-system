@@ -79,3 +79,11 @@ func (s *PostService) AddViews(id uint) error {
 func (s *PostService) AddLikes(id uint) error {
 	return s.PostRepo.AddLikes(id)
 }
+
+func (s *PostService) PinPost(id uint, pinnedOrder int, pinedUntil *time.Time) error {
+	return s.PostRepo.PinPost(id, pinnedOrder, pinedUntil)
+}
+
+func (s *PostService) UnpinPost(id uint) error {
+	return s.PostRepo.UnpinPost(id)
+}
