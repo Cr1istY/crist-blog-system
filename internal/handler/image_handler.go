@@ -192,7 +192,7 @@ func (h *ImageHandler) ProxyImage(c echo.Context) error {
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Pragma", "no-cache")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
-	// 可选：添加 sec-fetch 头增强可信度（Go 允许设置自定义头）
+	// 添加 sec-fetch 头增强可信度
 	req.Header.Set("Sec-Fetch-Site", "none")
 	req.Header.Set("Sec-Fetch-Mode", "navigate")
 	req.Header.Set("Sec-Fetch-Dest", "document")
