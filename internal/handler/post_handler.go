@@ -1,14 +1,17 @@
 package handler
 
 import (
+	"context"
 	"crist-blog/internal/assets"
 	"crist-blog/internal/model"
 	"crist-blog/internal/service"
 	"crist-blog/internal/utils"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
@@ -16,12 +19,16 @@ import (
 type PostHandler struct {
 	postService     *service.PostService
 	categoryService *service.CategoryService
+	rdb             *redis.Client
+	cacheKey        string
 }
 
-func NewPostHandler(postService *service.PostService, categoryService *service.CategoryService) *PostHandler {
+func NewPostHandler(postService *service.PostService, categoryService *service.CategoryService, redisService *redis.Client) *PostHandler {
 	return &PostHandler{
 		postService:     postService,
 		categoryService: categoryService,
+		rdb:             redisService,
+		cacheKey:        "blog:posts:frontend:list:v1",
 	}
 }
 
@@ -46,6 +53,9 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 	}
 	title := utils.ExtractPostTitle(req.Content)
+	if req.Title != "" {
+		title = req.Title
+	}
 	if title == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Title is required"})
 	}
@@ -77,6 +87,39 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	if err := h.postService.CreatePost(post); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
+
+	go func() {
+		ctx := context.Background()
+		cacheKey := h.cacheKey
+
+		posts, goErr := h.postService.List()
+		if goErr != nil {
+			println("Failed to list posts for cache refresh", "err", goErr)
+			return
+		}
+
+		frontendPosts, goErr := h.blogPostsToPostWithPinned(posts)
+		if goErr != nil {
+			println("Failed to convert posts for cache refresh", "err", goErr)
+			return
+		}
+		// 写入 redis
+
+		data, goErr := json.Marshal(frontendPosts)
+		if goErr != nil {
+			println("Failed to marshal posts for cache", "err", goErr)
+			return
+		}
+
+		if goErr = h.rdb.Set(ctx, cacheKey, data, 0).Err(); goErr != nil {
+			println("Failed to refresh post list cache", "key", cacheKey, "err", goErr)
+			return
+		}
+
+		println("Post list cache refreshed successfully after create",
+			"post_id", post.ID, "cache_key", cacheKey, "item_count", len(frontendPosts))
+
+	}()
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"message": "Post created successfully", "id": post.ID})
 }
@@ -265,32 +308,43 @@ func (h *PostHandler) ListToFrontend(c echo.Context) error {
 	return c.JSON(http.StatusOK, blogPosts)
 }
 
+// TODO 使用 redis 缓存博客文章JSON，当有文章创建时，重写写入 redis
+
 func (h *PostHandler) ListToFrontendWithPinned(c echo.Context) error {
+	// 1. 创建 redis 键
+	ctx := c.Request().Context()
+	cacheKey := h.cacheKey
+	// 2. 检查是否已经存在
+	cacheData, err := h.rdb.Get(ctx, cacheKey).Bytes()
+	if err == nil && len(cacheData) > 0 {
+		// 3. 如果存在，直接返回
+		var blogPosts []*model.PostFrontendWithPinned
+		if json.Unmarshal(cacheData, &blogPosts) == nil {
+			return c.JSON(http.StatusOK, blogPosts)
+		}
+		println("Redis cache parse failed, rebuilding...", "key", cacheKey, "err", err)
+	}
+	// 4. 如果不存在，写入 redis，并返回
+
 	posts, err := h.postService.List()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
-	var blogPosts []*model.PostFrontendWithPinned
-	for _, post := range posts {
-		if post.Status != model.Published {
-			continue
-		}
-		if post.Thumbnail == "" {
-			post.Thumbnail = assets.GetThumbnail()
-		}
-		blogPosts = append(blogPosts, &model.PostFrontendWithPinned{
-			Slug:        post.Slug,
-			Title:       post.Title,
-			Tags:        post.Tags,
-			Date:        post.PublishedAt.Format("2006-01-02"),
-			Excerpt:     post.Excerpt,
-			Views:       post.Views,
-			Likes:       post.Likes,
-			Thumbnail:   post.Thumbnail,
-			IsPinned:    post.IsPinned,
-			PinnedOrder: post.PinnedOrder,
-		})
+	blogPosts, err := h.blogPostsToPostWithPinned(posts)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error: ": "blogPostsToPostWithPinned"})
 	}
+	// 异步写入缓存
+	go func() {
+		data, err := json.Marshal(blogPosts)
+		if err != nil {
+			println("Failed to marshal posts for cache", "err", err)
+			return
+		}
+		if err := h.rdb.Set(context.Background(), cacheKey, data, 12*time.Hour).Err(); err != nil {
+			println("Failed to set posts cache", "err", err)
+		}
+	}()
 	return c.JSON(http.StatusOK, blogPosts)
 }
 
@@ -388,4 +442,29 @@ func (h *PostHandler) UnpinPost(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "database error"})
 	}
 	return c.JSON(http.StatusOK, map[string]string{"message": "Post unpinned successfully"})
+}
+
+func (h *PostHandler) blogPostsToPostWithPinned(posts []*model.Post) ([]*model.PostFrontendWithPinned, error) {
+	var blogPosts []*model.PostFrontendWithPinned
+	for _, post := range posts {
+		if post.Status != model.Published {
+			continue
+		}
+		if post.Thumbnail == "" {
+			post.Thumbnail = assets.GetThumbnail()
+		}
+		blogPosts = append(blogPosts, &model.PostFrontendWithPinned{
+			Slug:        post.Slug,
+			Title:       post.Title,
+			Tags:        post.Tags,
+			Date:        post.PublishedAt.Format("2006-01-02"),
+			Excerpt:     post.Excerpt,
+			Views:       post.Views,
+			Likes:       post.Likes,
+			Thumbnail:   post.Thumbnail,
+			IsPinned:    post.IsPinned,
+			PinnedOrder: post.PinnedOrder,
+		})
+	}
+	return blogPosts, nil
 }

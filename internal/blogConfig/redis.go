@@ -68,6 +68,6 @@ func ConnectRedis() *redis.Client {
 		panic(fmt.Sprintf("REDIS: Failed to connect to Redis at %s: %v", addr, err))
 	}
 
-	log.Println("REDIS: Connected to Redis")
+	log.Println("🔥 REDIS: Connected to Redis")
 	return client
 }

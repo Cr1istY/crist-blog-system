@@ -39,6 +39,7 @@ func (r *RefreshTokenRepository) ReturnAdminHash() (*model.RefreshToken, error) 
 	return &token, nil
 }
 
+// Revoke revoke refresh token
 func (r *RefreshTokenRepository) Revoke(id uuid.UUID) error {
 	return r.DB.Model(&model.RefreshToken{}).
 		Where("id = ? AND revoked = false", id).

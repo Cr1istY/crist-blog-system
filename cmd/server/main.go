@@ -42,7 +42,7 @@ func main() {
 	postService := service.NewPostService(postRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 
-	postHandler := handler.NewPostHandler(postService, categoryService)
+	postHandler := handler.NewPostHandler(postService, categoryService, redis)
 	userHandler := handler.NewUserHandler(authService, userService)
 	imageHandler := handler.NewImageHandler(redis)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
