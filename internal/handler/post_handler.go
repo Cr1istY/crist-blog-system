@@ -308,7 +308,7 @@ func (h *PostHandler) ListToFrontend(c echo.Context) error {
 	return c.JSON(http.StatusOK, blogPosts)
 }
 
-// TODO 使用 redis 缓存博客文章JSON，当有文章创建时，重写写入 redis
+// 使用 redis 缓存博客文章JSON，当有文章创建时，重写写入 redis
 
 func (h *PostHandler) ListToFrontendWithPinned(c echo.Context) error {
 	// 1. 创建 redis 键
