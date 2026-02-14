@@ -37,7 +37,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 	userAgent := c.Request().UserAgent()
 	ip := c.RealIP()
 
-	accessToken, refreshToken, err := h.authService.GenerateTokens(user, userAgent, ip)
+	accessToken, refreshToken, err := h.authService.GenerateTokensWithAgent(user, userAgent, ip)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to generate tokens"})
 	}

@@ -15,7 +15,7 @@ import (
 
 const (
 	AccessTokenExpire  = 15 * time.Minute
-	RefreshTokenExpire = 7 * 24 * time.Hour
+	RefreshTokenExpire = 15 * 24 * time.Hour
 	refreshTokenLength = 64
 )
 
@@ -114,6 +114,58 @@ func (s *AuthService) GenerateTokens(user *model.User, userAgent, ip string) (ac
 	err = s.refreshTokenRepo.CreateRefreshToken(rt)
 	if err != nil {
 		return "", "", err
+	}
+
+	// 返回生成的访问令牌和刷新令牌
+	return accessToken, refreshToken, nil
+}
+
+func (s *AuthService) GenerateTokensWithAgent(user *model.User, userAgent, ip string) (accessToken, refreshToken string, err error) {
+	// 生成访问令牌，使用用户ID作为参数，仅进行校验
+	accessToken, err = s.generateAccessToken(user.ID)
+	if err != nil {
+		return "", "", err
+	}
+	// 生成随机刷新令牌，长期存储
+	refreshToken, err = s.generateRandomToken()
+	if err != nil {
+		return "", "", err
+	}
+
+	// 使用bcrypt算法对刷新令牌进行哈希处理，增强安全性
+	tokenHash, err := bcrypt.GenerateFromPassword([]byte(refreshToken), bcrypt.DefaultCost)
+	if err != nil {
+		return "", "", err
+	}
+	// 撤销该用户之前的相同Agent的所有刷新令牌
+	_ = s.refreshTokenRepo.RevokeAllByUserIDAndAgent(user.ID, userAgent)
+	// ip地址不同，撤销之前所有ip地址的刷新令牌
+	formerIp, _ := s.refreshTokenRepo.FindIpByUserIDAndUserAgent(user.ID, userAgent)
+	if ip != formerIp && formerIp != "" {
+		_ = s.refreshTokenRepo.RevokeAllByUserID(user.ID) // 异地登陆，禁止以往登录令牌，以最后登陆地点为主
+	}
+	// 创建新的刷新令牌记录
+	rt := &model.RefreshToken{
+		UserID:    user.ID,                            // 用户ID
+		TokenHash: string(tokenHash),                  // 哈希后的令牌
+		UserAgent: userAgent,                          // 用户代理
+		IPAddress: ip,                                 // IP地址
+		ExpiresAt: time.Now().Add(RefreshTokenExpire), // 过期时间
+		Revoked:   false,                              // 未被撤销
+	}
+
+	// 将新的刷新令牌保存到数据库
+	err = s.refreshTokenRepo.CreateRefreshToken(rt)
+	if err != nil {
+		return "", "", err
+	}
+
+	// 令牌过期检查
+
+	err = s.refreshTokenRepo.CleanExpiredTokens()
+	if err != nil {
+		println("clean expired tokens failed: ", err.Error())
+		_ = s.refreshTokenRepo.RevokeAllByUserID(user.ID) // 安全考虑，直接禁用用户所有令牌
 	}
 
 	// 返回生成的访问令牌和刷新令牌

@@ -22,6 +22,7 @@ func (r *RefreshTokenRepository) CreateRefreshToken(token *model.RefreshToken) e
 	return r.DB.Create(token).Error
 }
 
+// FindByTokenHash 弃用，由于hash的特性，不能返回也不应该直接返回hash值
 func (r *RefreshTokenRepository) FindByTokenHash(hash string) (*model.RefreshToken, error) {
 	var token model.RefreshToken
 	if err := r.DB.Where("token_hash = ?", hash).First(&token).Error; err != nil {
@@ -52,6 +53,12 @@ func (r *RefreshTokenRepository) RevokeAllByUserID(userID uuid.UUID) error {
 		Update("revoked", true).Error
 }
 
+func (r *RefreshTokenRepository) RevokeAllByUserIDAndAgent(userID uuid.UUID, agent string) error {
+	return r.DB.Model(&model.RefreshToken{}).
+		Where("user_id = ? AND user_agent = ? AND revoked = false", userID, agent).
+		Update("revoked", true).Error
+}
+
 func (r *RefreshTokenRepository) CleanExpiredTokens() error {
 	return r.DB.Where("expires_at < ? OR revoked = true", time.Now()).Delete(&model.RefreshToken{}).Error
 }
@@ -63,4 +70,15 @@ func (r *RefreshTokenRepository) FindAllValid() ([]*model.RefreshToken, error) {
 		return nil, err
 	}
 	return tokens, nil
+}
+
+func (r *RefreshTokenRepository) FindIpByUserIDAndUserAgent(userID uuid.UUID, agent string) (string, error) {
+	var token model.RefreshToken
+	err := r.DB.Where("user_id = ? AND user_agent = ? AND revoked = false", userID, agent).
+		Select("ip_address").
+		First(token).Error
+	if err != nil {
+		return "", err
+	}
+	return token.IPAddress, nil
 }
