@@ -93,7 +93,7 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	}
 
 	go func() {
-		err := h.postsSaveToRedis()
+		_, err := h.postsSaveToRedis(h.cacheKey)
 		if err != nil {
 			println("Error while saving post list to redis", err.Error())
 			return
@@ -231,11 +231,12 @@ func (h *PostHandler) Update(c echo.Context) error {
 	}
 
 	go func() {
-		goErr := h.postsSaveToRedis()
+		_, goErr := h.postsSaveToRedis(h.cacheKey)
 		if goErr != nil {
 			println("Error saving posts to redis: ", goErr.Error())
 			return
 		}
+		println("successful saving to redis when update")
 	}()
 
 	return c.JSON(http.StatusOK, map[string]string{"post_slug": post.Slug})
@@ -251,7 +252,12 @@ func (h *PostHandler) Delete(c echo.Context) error {
 	if err := h.postService.Delete(id); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
-
+	go func() {
+		_, err := h.postsSaveToRedis(h.cacheKey)
+		if err != nil {
+			println("Error saving posts to redis: ", err.Error())
+		}
+	}()
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -267,6 +273,7 @@ func (h *PostHandler) List(c echo.Context) error {
 	return c.JSON(http.StatusOK, posts)
 }
 
+// ListToFrontend 已弃用，见ListToFrontendWithPinned
 func (h *PostHandler) ListToFrontend(c echo.Context) error {
 	posts, err := h.postService.List()
 	if err != nil {
@@ -312,7 +319,6 @@ func (h *PostHandler) ListToFrontendWithPinned(c echo.Context) error {
 		println("Redis cache parse failed, rebuilding...", "key", cacheKey, "err", err)
 	}
 	// 4. 如果不存在，写入 redis，并返回
-
 	posts, err := h.postService.List()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -457,34 +463,33 @@ func (h *PostHandler) blogPostsToPostWithPinned(posts []*model.Post) ([]*model.P
 	return blogPosts, nil
 }
 
-func (h *PostHandler) postsSaveToRedis() error {
+func (h *PostHandler) postsSaveToRedis(cacheKey string) ([]*model.PostFrontendWithPinned, error) {
 	ctx := context.Background()
-	cacheKey := h.cacheKey
 
 	posts, goErr := h.postService.List()
 	if goErr != nil {
 		println("Failed to list posts for cache refresh", "err", goErr)
-		return goErr
+		return nil, goErr
 	}
 
 	frontendPosts, goErr := h.blogPostsToPostWithPinned(posts)
 	if goErr != nil {
 		println("Failed to convert posts for cache refresh", "err", goErr)
-		return goErr
+		return frontendPosts, goErr
 	}
 	// 写入 redis
 
 	data, goErr := json.Marshal(frontendPosts)
 	if goErr != nil {
 		println("Failed to marshal posts for cache", "err", goErr)
-		return goErr
+		return frontendPosts, goErr
 	}
 
-	if goErr = h.rdb.Set(ctx, cacheKey, data, 0).Err(); goErr != nil {
+	if goErr = h.rdb.Set(ctx, cacheKey, data, 12*time.Hour).Err(); goErr != nil {
 		println("Failed to refresh post list cache", "key", cacheKey, "err", goErr)
-		return goErr
+		return frontendPosts, goErr
 	}
-	return nil
+	return frontendPosts, nil
 }
 
 func (h *PostHandler) generateSlug(title string) (string, error) {
