@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -135,9 +134,6 @@ func (s *AuthService) RefreshAccessToken(refreshTokenStr string) (newAccessToken
 	newAccessToken, err = s.generateAccessToken(rt.UserID)
 	if err != nil {
 		return "", errors.New("failed to generate access token")
-	}
-	if err := s.refreshTokenRepo.Revoke(rt.ID); err != nil {
-		log.Printf("warning: failed to revoke refresh token %s: %v", rt.ID, err)
 	}
 
 	return newAccessToken, nil
