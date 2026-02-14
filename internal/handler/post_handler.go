@@ -89,38 +89,15 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	}
 
 	go func() {
-		ctx := context.Background()
-		cacheKey := h.cacheKey
-
-		posts, goErr := h.postService.List()
-		if goErr != nil {
-			println("Failed to list posts for cache refresh", "err", goErr)
+		err := h.postsSaveToRedis()
+		if err != nil {
+			println("Error while saving post list to redis", err.Error())
 			return
 		}
-
-		frontendPosts, goErr := h.blogPostsToPostWithPinned(posts)
-		if goErr != nil {
-			println("Failed to convert posts for cache refresh", "err", goErr)
-			return
-		}
-		// 写入 redis
-
-		data, goErr := json.Marshal(frontendPosts)
-		if goErr != nil {
-			println("Failed to marshal posts for cache", "err", goErr)
-			return
-		}
-
-		if goErr = h.rdb.Set(ctx, cacheKey, data, 0).Err(); goErr != nil {
-			println("Failed to refresh post list cache", "key", cacheKey, "err", goErr)
-			return
-		}
-
-		println("Post list cache refreshed successfully after create",
-			"post_id", post.ID, "cache_key", cacheKey, "item_count", len(frontendPosts))
-
 	}()
 
+	println("Post list cache refreshed successfully after create",
+		"post_id", post.ID, "cache_key", h.cacheKey)
 	return c.JSON(http.StatusOK, map[string]interface{}{"message": "Post created successfully", "id": post.ID})
 }
 
@@ -250,8 +227,15 @@ func (h *PostHandler) Update(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	updated, _ := h.postService.GetByID(id)
-	return c.JSON(http.StatusOK, updated)
+	go func() {
+		goErr := h.postsSaveToRedis()
+		if goErr != nil {
+			println("Error saving posts to redis: ", goErr.Error())
+			return
+		}
+	}()
+
+	return c.JSON(http.StatusOK, map[string]string{"post_slug": post.Slug})
 }
 
 func (h *PostHandler) Delete(c echo.Context) error {
@@ -467,4 +451,34 @@ func (h *PostHandler) blogPostsToPostWithPinned(posts []*model.Post) ([]*model.P
 		})
 	}
 	return blogPosts, nil
+}
+
+func (h *PostHandler) postsSaveToRedis() error {
+	ctx := context.Background()
+	cacheKey := h.cacheKey
+
+	posts, goErr := h.postService.List()
+	if goErr != nil {
+		println("Failed to list posts for cache refresh", "err", goErr)
+		return goErr
+	}
+
+	frontendPosts, goErr := h.blogPostsToPostWithPinned(posts)
+	if goErr != nil {
+		println("Failed to convert posts for cache refresh", "err", goErr)
+		return goErr
+	}
+	// 写入 redis
+
+	data, goErr := json.Marshal(frontendPosts)
+	if goErr != nil {
+		println("Failed to marshal posts for cache", "err", goErr)
+		return goErr
+	}
+
+	if goErr = h.rdb.Set(ctx, cacheKey, data, 0).Err(); goErr != nil {
+		println("Failed to refresh post list cache", "key", cacheKey, "err", goErr)
+		return goErr
+	}
+	return nil
 }
