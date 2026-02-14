@@ -7,6 +7,7 @@ import (
 	"crist-blog/internal/service"
 	"crist-blog/internal/utils"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -61,7 +62,10 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	}
 	req.Title = title
 	req.MetaTitle = title
-	slug := utils.ToSlug(title)
+	slug, err := h.generateSlug(title)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to generate slug when create"})
+	}
 	req.Slug = slug
 	req.MetaDescription = req.Excerpt
 	if req.Thumbnail == "" {
@@ -200,8 +204,7 @@ func (h *PostHandler) Update(c echo.Context) error {
 	}
 	req.Title = title
 	req.MetaTitle = title
-	slug := utils.ToSlug(title)
-	req.Slug = slug
+	req.Slug = rawPost.Slug
 	req.MetaDescription = req.Excerpt
 	post := &model.Post{
 		ID:              id,
@@ -438,6 +441,7 @@ func (h *PostHandler) blogPostsToPostWithPinned(posts []*model.Post) ([]*model.P
 			post.Thumbnail = assets.GetThumbnail()
 		}
 		blogPosts = append(blogPosts, &model.PostFrontendWithPinned{
+			ID:          post.ID,
 			Slug:        post.Slug,
 			Title:       post.Title,
 			Tags:        post.Tags,
@@ -481,4 +485,31 @@ func (h *PostHandler) postsSaveToRedis() error {
 		return goErr
 	}
 	return nil
+}
+
+func (h *PostHandler) generateSlug(title string) (string, error) {
+	slug, err := utils.ToSlug(title)
+	if err != nil {
+		return "", err
+	}
+
+	for attemptGenerateSlug := 0; attemptGenerateSlug < 6; attemptGenerateSlug++ {
+		_, err = h.postService.GetBySlug(slug)
+		if err != nil && errors.Is(model.ErrSlugNotFound, err) {
+			break
+		}
+		if err != nil {
+			// 此时，是数据库的其他问题，应该直接退出程序
+			return "", err
+		}
+		// slug重复，生成一个末尾带有随机数的新slug
+		if attemptGenerateSlug == 5 {
+			// 重复次数过多，直接退出
+			return "", errors.New("try too much times when generate slug")
+		}
+		slug = utils.SlugToSlugWithRandom(slug)
+	}
+
+	return slug, nil
+
 }

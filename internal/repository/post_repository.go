@@ -2,6 +2,7 @@ package repository
 
 import (
 	"crist-blog/internal/model"
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
@@ -28,6 +29,9 @@ func (r *PostRepository) GetByID(id uint) (*model.Post, error) {
 func (r *PostRepository) GetBySlug(slug string) (*model.Post, error) {
 	var post model.Post
 	err := r.DB.Where("slug = ?", slug).First(&post).Error
+	if errors.Is(gorm.ErrRecordNotFound, err) {
+		return nil, model.ErrSlugNotFound
+	}
 	return &post, err
 }
 

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -27,7 +28,18 @@ func ExtractPostTitle(content string) string {
 	return title
 }
 
-func ToSlug(title string) string {
+func ToSlug(title string) (string, error) {
+	if title == "" {
+		return "", errors.New("title is required when generating slug")
+	}
+	slug := toSlugWithoutRandom(title)
+	if slug == "" {
+		return slug, errors.New("slug is empty, please check your title")
+	}
+	return slug, nil
+}
+
+func toSlugWithoutRandom(title string) string {
 	if title == "" {
 		return "untitled"
 	}
@@ -54,6 +66,10 @@ func ToSlug(title string) string {
 	if slug == "" {
 		slug = "untitled"
 	}
+	return slug
+}
+
+func SlugToSlugWithRandom(slug string) string {
 	// 生成随机数，填充在slug之后，防止slug重复
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	num := r.Intn(25565)

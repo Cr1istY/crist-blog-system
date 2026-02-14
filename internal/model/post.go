@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +16,8 @@ const (
 	Published PostStatus = "published"
 	Private   PostStatus = "private"
 )
+
+var ErrSlugNotFound = errors.New("post not found by slug")
 
 type Post struct {
 	ID              uint           `gorm:"primaryKey;autoIncrement" json:"id"`
@@ -70,6 +73,7 @@ type PostFrontend struct {
 }
 
 type PostFrontendWithPinned struct {
+	ID          uint     `gorm:"primaryKey;autoIncrement" json:"id"`
 	Slug        string   `json:"slug" validate:"required"`
 	Title       string   `json:"title"`
 	Tags        []string `json:"tags"`

@@ -49,7 +49,10 @@ func (h *CategoryHandler) CreateCategory(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "wrong request body of category in create:)"})
 	}
-	slug := utils.ToSlug(createCategory.Name)
+	slug, err := utils.ToSlug(createCategory.Name)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "wrong request body of category name in create:)"})
+	}
 	var category = model.Category{
 		Name:        createCategory.Name,
 		Description: createCategory.Description,
