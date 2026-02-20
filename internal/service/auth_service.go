@@ -191,6 +191,26 @@ func (s *AuthService) RefreshAccessToken(refreshTokenStr string) (newAccessToken
 	return newAccessToken, nil
 }
 
+func (s *AuthService) RefreshAccessTokenWithIpAndAgent(refreshTokenStr, userAgent, ip string) (newAccessToken string, err error) {
+	var rt *model.RefreshToken
+	// rt, err = s.refreshTokenRepo.FindByTokenHash(refreshTokenStr)
+	userID := "00000000-0000-0000-0000-000000000001"
+	rt, err = s.refreshTokenRepo.ReturnAdminHashWithIPAndAgent(userID, userAgent, ip)
+	if err != nil {
+		return "", errors.New("!!!database error")
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(rt.TokenHash), []byte(refreshTokenStr))
+	if err != nil {
+		return "", errors.New("invalid refresh token")
+	}
+	newAccessToken, err = s.generateAccessToken(rt.UserID)
+	if err != nil {
+		return "", errors.New("failed to generate access token")
+	}
+
+	return newAccessToken, nil
+}
+
 func (s *AuthService) GetTheRefreshTokenExpired() time.Duration {
 	return RefreshTokenExpire
 }

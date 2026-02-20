@@ -31,7 +31,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 	}
 	user, err := h.userService.Login(req.Username, req.Password)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid username or password"})
 	}
 
 	userAgent := c.Request().UserAgent()
@@ -42,15 +42,24 @@ func (h *UserHandler) Login(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to generate tokens"})
 	}
 
-	c.SetCookie(&http.Cookie{
+	isProduction := c.Request().TLS != nil || c.Request().Header.Get("X-Forwarded-Proto") == "https"
+
+	cookie := &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteStrictMode,
+		Secure:   isProduction,         // 仅生产环境启用
+		SameSite: http.SameSiteLaxMode, // 开发环境用 Lax
 		Path:     "/",
 		MaxAge:   int(h.authService.GetTheRefreshTokenExpired().Seconds()),
-	})
+	}
+
+	// 生产环境才设置 Domain
+	if isProduction {
+		cookie.Domain = "foreveryang.cn"
+	}
+
+	c.SetCookie(cookie)
 
 	return c.JSON(http.StatusOK, map[string]string{
 		"access_token": accessToken,
@@ -59,11 +68,13 @@ func (h *UserHandler) Login(c echo.Context) error {
 
 func (h *UserHandler) Refresh(c echo.Context) error {
 	cookie, err := c.Cookie("refresh_token")
+	userAgent := c.Request().UserAgent()
+	ip := c.RealIP()
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Refresh token not found"})
 	}
 
-	accessToken, err := h.authService.RefreshAccessToken(cookie.Value)
+	accessToken, err := h.authService.RefreshAccessTokenWithIpAndAgent(cookie.Value, userAgent, ip)
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
 	}
