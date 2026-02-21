@@ -67,7 +67,11 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to generate slug when create"})
 	}
 	req.Slug = slug
-	req.MetaDescription = req.Excerpt
+	excerpt := req.Excerpt
+	if len(req.Excerpt) >= 20 {
+		excerpt = req.Excerpt[:20] + "..."
+	}
+	req.MetaDescription = excerpt
 	if req.Thumbnail == "" {
 		req.Thumbnail = assets.GetThumbnail()
 	}
@@ -76,7 +80,7 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 		Title:           req.Title,
 		Slug:            req.Slug,
 		Content:         req.Content,
-		Excerpt:         req.Excerpt,
+		Excerpt:         excerpt,
 		Status:          model.PostStatus(req.Status),
 		CategoryID:      uuid.MustParse(req.CategoryID),
 		Tags:            req.Tags,
