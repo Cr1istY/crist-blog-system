@@ -6,6 +6,7 @@ import (
 	"crist-blog/internal/repository"
 	"crist-blog/internal/route"
 	"crist-blog/internal/service"
+	config "crist-blog/internal/uploadConfig"
 	"crypto/rand"
 	"encoding/base64"
 	"log"
@@ -27,11 +28,16 @@ func main() {
 
 	db := blogConfig.ConnectDB()
 	redis := blogConfig.ConnectRedis()
+	cos := config.NewCOSService()
 	defer func() {
 		if redis != nil {
 			_ = redis.Close()
 		}
 	}()
+
+	// 初始化配置, 导入.env文件
+	uploadCfg := config.Load()
+
 	userRepo := repository.NewUserRepository(db)
 	authRepo := repository.NewRefreshTokenRepository(db)
 	postRepo := repository.NewPostRepository(db)
@@ -42,6 +48,8 @@ func main() {
 	postService := service.NewPostService(postRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 
+	uploadHandler := handler.NewUploadHandler(uploadCfg)
+	uploadCOSHandler := handler.NewCOSHandler(uploadHandler, cos, uploadCfg)
 	postHandler := handler.NewPostHandler(postService, categoryService, redis)
 	userHandler := handler.NewUserHandler(authService, userService)
 	imageHandler := handler.NewImageHandler(redis)
@@ -53,9 +61,12 @@ func main() {
 		AllowOrigins: []string{"http://localhost:3000", "https://localhost:3000"},
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
 	}))
+	e.Use(middleware.Recover())
+
 	route.SetupUserRoutes(e, userHandler, authService)
 	route.SetupBlogRouter(e, postHandler, imageHandler, authService)
 	route.SetupCategoryRouter(e, categoryHandler, authService)
+	route.SetupUploadRouter(e, uploadHandler, uploadCOSHandler, authService)
 	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {

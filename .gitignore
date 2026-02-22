@@ -112,3 +112,7 @@ go.work.sum
 *.iml
 out
 gen
+
+# upload file
+uploads
+uploads/*
