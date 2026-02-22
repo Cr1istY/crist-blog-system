@@ -35,7 +35,8 @@ func NewPostHandler(postService *service.PostService, categoryService *service.C
 
 func (h *PostHandler) CreatePost(c echo.Context) error {
 	var req model.CreatePostRequest
-	userId := "00000000-0000-0000-0000-000000000001"
+	userId := c.Get("user_id_str").(string)
+	// userId := "00000000-0000-0000-0000-000000000001"
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}

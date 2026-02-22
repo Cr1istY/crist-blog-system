@@ -63,7 +63,7 @@ func AuthMiddleware(authService *service.AuthService) echo.MiddlewareFunc {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 			}
 			c.Set("user_id", userID)
-
+			c.Set("user_id_str", userIDStr)
 			return next(c)
 		}
 	}
