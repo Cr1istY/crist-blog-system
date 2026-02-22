@@ -45,7 +45,7 @@ func NewCOSService() *COSService {
 		},
 	}
 	client := cos.NewClient(&cos.BaseURL{BucketURL: bucketURL}, httpClient)
-	log.Println("☁️COS client init success")
+	log.Println("☁️ COS client init success")
 	return &COSService{
 		Client: client,
 		Config: config}

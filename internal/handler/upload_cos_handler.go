@@ -3,8 +3,11 @@ package handler
 import (
 	"context"
 	"crist-blog/internal/model"
+	"crist-blog/internal/service"
 	config "crist-blog/internal/uploadConfig"
 	"fmt"
+	"image"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
@@ -17,13 +20,15 @@ import (
 
 type COSHandler struct {
 	uploadHandler *UploadHandler
+	imageService  *service.ImageService
 	cosService    *config.COSService
 	config        *config.Config
 }
 
-func NewCOSHandler(uploadHandler *UploadHandler, service *config.COSService, cfg *config.Config) *COSHandler {
+func NewCOSHandler(uploadHandler *UploadHandler, imageService *service.ImageService, service *config.COSService, cfg *config.Config) *COSHandler {
 	return &COSHandler{
 		uploadHandler: uploadHandler,
+		imageService:  imageService,
 		cosService:    service,
 		config:        cfg,
 	}
@@ -96,6 +101,18 @@ func (h *COSHandler) processFileUpload(file *multipart.FileHeader) (model.Upload
 		_ = src.Close()
 	}(src)
 
+	width, height := 0, 0
+	picConfig, _, err := image.DecodeConfig(src)
+	if err == nil {
+		width = picConfig.Width
+		height = picConfig.Height
+	}
+
+	_, err = src.Seek(0, io.SeekStart)
+	if err != nil {
+		return model.UploadResponse{}, fmt.Errorf("无法重置文件指针: %v", err)
+	}
+
 	// 生成COS对象键（按日期分类存储）
 	ext := filepath.Ext(file.Filename)
 	objectKey := h.generateObjectKey(ext)
@@ -113,8 +130,8 @@ func (h *COSHandler) processFileUpload(file *multipart.FileHeader) (model.Upload
 
 	// 构建CDN访问URL
 	cdnURL := fmt.Sprintf("%s/%s", h.cosService.Config.CDNDomain, objectKey)
-	width, height := 0, 0
-	return model.UploadResponse{
+
+	response := &model.UploadResponse{
 		URL:       cdnURL,
 		ID:        uuid.New().String(),
 		Filename:  filepath.Base(objectKey),
@@ -122,7 +139,13 @@ func (h *COSHandler) processFileUpload(file *multipart.FileHeader) (model.Upload
 		Width:     width,
 		Height:    height,
 		CreatedAt: time.Now().Format(time.RFC3339),
-	}, nil
+	}
+
+	err = h.imageService.CreateImage(response.ToImage())
+	if err != nil {
+		return model.UploadResponse{}, fmt.Errorf("创建图片记录失败: %v", err)
+	}
+	return *response, nil
 }
 
 // isValidImageType 验证图片类型

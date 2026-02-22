@@ -2,8 +2,11 @@ package handler
 
 import (
 	"crist-blog/internal/service"
+	"errors"
 	"net/http"
+	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -74,7 +77,54 @@ func (h *UserHandler) Refresh(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Refresh token not found"})
 	}
 
-	accessToken, err := h.authService.RefreshAccessTokenWithIpAndAgent(cookie.Value, userAgent, ip)
+	// 解析获取user_id, 由于每次程序重启后，JWT会重新生成密钥，所以，需要重新登录
+	authHeader := c.Request().Header.Get("Authorization")
+	if authHeader == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "authHeader == \"\""})
+	}
+	patrs := strings.Split(authHeader, " ")
+	if len(patrs) != 2 || patrs[0] != "Bearer" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+	}
+	tokenStr := patrs[1]
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(h.authService.JwtSecret()), nil
+	})
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return c.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "access token expired",
+			})
+		}
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "invalid access token",
+		})
+	}
+
+	if !token.Valid {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "invalid access token",
+		})
+	}
+	calims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+	}
+	userIDStr, ok := calims["user_id"].(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+	}
+	// 现在，程序的逻辑变成了，当刷新令牌没有过期时
+	// 每一次刷新操作都会重置权限令牌
+	// 但是，当权限令牌过期或者被修改
+	// 由于此时不能正确读取user_id
+	// 所以必须重新登录
+
+	accessToken, err := h.authService.RefreshAccessTokenWithIpAndAgent(userIDStr, cookie.Value, userAgent, ip)
+
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
 	}

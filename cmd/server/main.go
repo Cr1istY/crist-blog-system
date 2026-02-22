@@ -28,7 +28,7 @@ func main() {
 
 	db := blogConfig.ConnectDB()
 	redis := blogConfig.ConnectRedis()
-	cos := config.NewCOSService()
+
 	defer func() {
 		if redis != nil {
 			_ = redis.Close()
@@ -42,17 +42,23 @@ func main() {
 	authRepo := repository.NewRefreshTokenRepository(db)
 	postRepo := repository.NewPostRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
+	imageRepo := repository.NewImageRepository(db)
+	tweetRepo := repository.NewTweetRepository(db)
 
 	userService := service.NewUserService(userRepo)
 	authService := service.NewAuthService(userRepo, authRepo, jwtSecret)
 	postService := service.NewPostService(postRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
+	imageService := service.NewImageService(imageRepo)
+	tweetService := service.NewTweetService(tweetRepo)
+	cos := config.NewCOSService()
 
 	uploadHandler := handler.NewUploadHandler(uploadCfg)
-	uploadCOSHandler := handler.NewCOSHandler(uploadHandler, cos, uploadCfg)
+	uploadCOSHandler := handler.NewCOSHandler(uploadHandler, imageService, cos, uploadCfg)
 	postHandler := handler.NewPostHandler(postService, categoryService, redis)
 	userHandler := handler.NewUserHandler(authService, userService)
 	imageHandler := handler.NewImageHandler(redis)
+	tweetHandler := handler.NewTweetHandler(tweetService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 
 	e := echo.New()
@@ -67,6 +73,7 @@ func main() {
 	route.SetupBlogRouter(e, postHandler, imageHandler, authService)
 	route.SetupCategoryRouter(e, categoryHandler, authService)
 	route.SetupUploadRouter(e, uploadHandler, uploadCOSHandler, authService)
+	route.SetupTweetRouter(e, tweetHandler, authService)
 	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {

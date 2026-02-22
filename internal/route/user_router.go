@@ -18,11 +18,11 @@ func SetupUserRoutes(e *echo.Echo,
 		return c.String(http.StatusOK, "Hello, Admin!")
 	})
 	admin.POST("/login", userHandler.Login)
+	admin.POST("/auth/refresh", userHandler.Refresh)
 
 	auth := e.Group("/api")
 	auth.Use(middleware.AuthMiddleware(authService))
 	{
-		admin.POST("/auth/refresh", userHandler.Refresh)
 		auth.GET("/user", func(c echo.Context) error {
 			return c.JSON(http.StatusOK, c.Get("user_id"))
 		})

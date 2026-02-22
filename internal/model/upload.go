@@ -1,5 +1,24 @@
 package model
 
+import (
+	"time"
+)
+
+type Image struct {
+	ID        string    `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	URL       string    `gorm:"type:varchar(512);not null" json:"url"`
+	Filename  string    `gorm:"type:varchar(255);not null" json:"filename"`
+	Size      int64     `gorm:"type:bigint;not null" json:"size"`
+	Width     int       `gorm:"type:integer" json:"width,omitempty"`
+	Height    int       `gorm:"type:integer" json:"height,omitempty"`
+	CreatedAt time.Time `gorm:"type:timestamptz;not null;default:now()" json:"created_at"`
+	UpdatedAt time.Time `gorm:"type:timestamptz;not null;default:now()" json:"updated_at"`
+}
+
+func (Image) TableName() string {
+	return "blog.images"
+}
+
 type UploadResponse struct {
 	URL       string `json:"url"`
 	ID        string `json:"id"`
@@ -8,6 +27,17 @@ type UploadResponse struct {
 	Width     int    `json:"width,omitempty"`
 	Height    int    `json:"height,omitempty"`
 	CreatedAt string `json:"created_at"`
+}
+
+func (r *UploadResponse) ToImage() *Image {
+	return &Image{
+		ID:       r.ID,
+		URL:      r.URL,
+		Filename: r.Filename,
+		Size:     r.Size,
+		Width:    r.Width,
+		Height:   r.Height,
+	}
 }
 
 type UploadRequest struct {
