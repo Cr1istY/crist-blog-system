@@ -58,7 +58,7 @@ func main() {
 	postHandler := handler.NewPostHandler(postService, categoryService, redis)
 	userHandler := handler.NewUserHandler(authService, userService)
 	imageHandler := handler.NewImageHandler(redis)
-	tweetHandler := handler.NewTweetHandler(tweetService)
+	tweetHandler := handler.NewTweetHandler(tweetService, userService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 
 	e := echo.New()

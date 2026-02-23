@@ -25,9 +25,18 @@ func (Tweet) TableName() string {
 }
 
 type TweetResponse struct {
-	ID        string    `json:"id"`
-	Content   string    `json:"content"`
-	Timestamp time.Time `json:"timestamp"`
-	Likes     int       `json:"likes"`
-	Images    []string  `json:"images,omitempty"`
+	ID        string        `json:"id"`
+	User      TweetListUser `json:"user"`
+	Content   string        `json:"content"`
+	Timestamp time.Time     `json:"timestamp"`
+	Likes     int           `json:"likes"`
+	Images    []string      `json:"images,omitempty"`
+}
+
+type TweetListUser struct {
+	ID          string `json:"id"`
+	UserName    string `json:"username"`
+	DisplayName string `json:"displayName"`
+	Avatar      string `json:"avatar"`
+	Verified    bool   `json:"verified"`
 }

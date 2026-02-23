@@ -5,6 +5,7 @@ import (
 	"crist-blog/internal/repository"
 	"errors"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -28,4 +29,20 @@ func (s *UserService) Login(username, password string) (*model.User, error) {
 		return nil, errors.New("密码错误")
 	}
 	return user, nil
+}
+
+func (s *UserService) GetTweetUserByID(userID uuid.UUID) (*model.TweetListUser, error) {
+	user, err := s.userRepo.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.TweetListUser{
+		ID:          user.ID.String(),
+		UserName:    user.Username,
+		DisplayName: user.Nickname,
+		Avatar:      user.Avatar,
+		Verified:    user.IsAdmin,
+	}, nil
+
 }
