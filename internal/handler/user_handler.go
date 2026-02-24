@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"crist-blog/internal/model"
 	"crist-blog/internal/service"
 	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -132,4 +134,28 @@ func (h *UserHandler) Refresh(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{
 		"access_token": accessToken,
 	})
+}
+
+func (h *UserHandler) ChangeUserInfo(c echo.Context) error {
+	userIDStr, ok := c.Get("user_id").(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "无效的用户ID"})
+	}
+
+	var req model.User
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "无效的请求参数"})
+	}
+
+	err = h.userService.ChangeUserInfo(userID, &req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "用户信息更新成功"})
+
 }

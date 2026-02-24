@@ -26,5 +26,6 @@ func SetupUserRoutes(e *echo.Echo,
 		auth.GET("/user", func(c echo.Context) error {
 			return c.JSON(http.StatusOK, c.Get("user_id"))
 		})
+		auth.POST("/changeUserInfo", userHandler.ChangeUserInfo)
 	}
 }

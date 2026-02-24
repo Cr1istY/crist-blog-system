@@ -46,3 +46,18 @@ func (s *UserService) GetTweetUserByID(userID uuid.UUID) (*model.TweetListUser, 
 	}, nil
 
 }
+
+func (s *UserService) ChangeUserInfo(id uuid.UUID, user *model.User) error {
+	existingUser, err := s.userRepo.GetUserByID(id)
+	if err != nil {
+		return err
+	}
+	// 确保用户重要信息不更改
+	user.ID = existingUser.ID
+	user.Username = existingUser.Username
+	user.Email = existingUser.Email
+	if err = s.userRepo.ChangeUserInfo(id, user); err != nil {
+		return err
+	}
+	return nil
+}
