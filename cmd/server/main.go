@@ -38,7 +38,7 @@ func main() {
 	// 初始化配置, 导入.env文件
 	uploadCfg := config.Load()
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(db, redis)
 	authRepo := repository.NewRefreshTokenRepository(db)
 	postRepo := repository.NewPostRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
