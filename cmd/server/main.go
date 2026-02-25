@@ -43,7 +43,7 @@ func main() {
 	postRepo := repository.NewPostRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
 	imageRepo := repository.NewImageRepository(db)
-	tweetRepo := repository.NewTweetRepository(db)
+	tweetRepo := repository.NewTweetRepository(db, redis)
 
 	userService := service.NewUserService(userRepo)
 	authService := service.NewAuthService(userRepo, authRepo, jwtSecret)
