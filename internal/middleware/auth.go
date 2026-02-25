@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -59,11 +58,9 @@ func AuthMiddleware(authService *service.AuthService) echo.MiddlewareFunc {
 			if !ok {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 			}
-			userID, err := uuid.Parse(userIDStr)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 			}
-			c.Set("user_id", userID)
 			c.Set("user_id_str", userIDStr)
 			return next(c)
 		}

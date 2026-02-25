@@ -141,7 +141,7 @@ func (h *UserHandler) Refresh(c echo.Context) error {
 }
 
 func (h *UserHandler) ChangeUserInfo(c echo.Context) error {
-	userIDStr, ok := c.Get("user_id").(string)
+	userIDStr, ok := c.Get("user_id_str").(string)
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 	}

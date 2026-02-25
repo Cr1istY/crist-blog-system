@@ -39,4 +39,6 @@ type TweetListUser struct {
 	DisplayName string `json:"displayName"`
 	Avatar      string `json:"avatar"`
 	Verified    bool   `json:"verified"`
+	Bio         string `json:"bio"`
+	Email       string `json:"email"`
 }

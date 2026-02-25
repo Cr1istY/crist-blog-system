@@ -43,6 +43,8 @@ func (s *UserService) GetCurrentTweetUserByID(userID uuid.UUID) (*model.TweetLis
 		DisplayName: user.Nickname,
 		Avatar:      user.Avatar,
 		Verified:    user.IsAdmin,
+		Email:       user.Email,
+		Bio:         user.Bio,
 	}, nil
 
 }
