@@ -27,3 +27,7 @@ func (s *TweetService) GetAllWithImages(ctx context.Context, limit, offset int) 
 func (s *TweetService) GetTweetWithImagesByID(ctx context.Context, id string) (*model.Tweet, error) {
 	return s.TweetRepo.GetByIDWithImages(ctx, id)
 }
+
+func (s *TweetService) DeleteTweet(ctx context.Context, id, userID string) error {
+	return s.TweetRepo.DeleteByID(ctx, id, userID)
+}

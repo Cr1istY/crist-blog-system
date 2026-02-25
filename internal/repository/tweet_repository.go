@@ -63,3 +63,8 @@ func (r *TweetRepository) GetByIDWithImages(ctx context.Context, id string) (*mo
 	}
 	return &tweet, nil
 }
+
+func (r *TweetRepository) DeleteByID(ctx context.Context, id, userID string) error {
+	err := r.db.WithContext(ctx).Model(&model.Tweet{}).Where("id = ? AND user_id = ?", id, userID).Update("deleted_flag", true).Error
+	return err
+}

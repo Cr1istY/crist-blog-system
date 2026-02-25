@@ -78,6 +78,9 @@ func (h *TweetHandler) GetAllTweets(c echo.Context) error {
 
 	tweetResponses := make([]model.TweetResponse, 0, len(tweets))
 	for _, tweet := range tweets {
+		if tweet.DeletedFlag {
+			continue
+		}
 		tweetResponses = append(tweetResponses, h.toTweetResponse(&tweet))
 
 	}
@@ -95,12 +98,31 @@ func (h *TweetHandler) GetCurrentUserInTweet(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "获取用户uuid失败"})
 	}
-	user, err := h.userService.GetTweetUserByID(userID)
+	user, err := h.userService.GetCurrentTweetUserByID(userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "在数据库中获取用户失败"})
 	}
 	return c.JSON(http.StatusOK, user)
 
+}
+
+func (h *TweetHandler) DeleteTweetByID(c echo.Context) error {
+	tweetID := c.Param("id")
+	if tweetID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "推文ID不能为空"})
+	}
+	// 检查是否为作者
+	// 获取当前用户ID
+	userIDStr, ok := c.Get("user_id_str").(string)
+	if !ok {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "获取用户失败"})
+	}
+	ctx := c.Request().Context()
+	err := h.tweetService.DeleteTweet(ctx, tweetID, userIDStr)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "删除推文失败"})
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": "推文删除成功"})
 }
 
 func (h *TweetHandler) toTweetResponse(tweet *model.Tweet) model.TweetResponse {
@@ -114,7 +136,7 @@ func (h *TweetHandler) toTweetResponse(tweet *model.Tweet) model.TweetResponse {
 		return model.TweetResponse{}
 	}
 
-	user, _ := h.userService.GetTweetUserByID(userID)
+	user, _ := h.userService.GetCurrentTweetUserByID(userID)
 
 	return model.TweetResponse{
 		ID:        tweet.ID,

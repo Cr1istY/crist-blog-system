@@ -17,5 +17,6 @@ func SetupTweetRouter(e *echo.Echo, tweetHandler *handler.TweetHandler, authServ
 	tweetAuth := api.Group("/tweet", middleware.AuthMiddleware(authService))
 	tweetAuth.POST("/create", tweetHandler.CreateTweet)
 	tweetAuth.GET("/getCurrentUser", tweetHandler.GetCurrentUserInTweet)
+	tweetAuth.DELETE("/delete/:id", tweetHandler.DeleteTweetByID)
 
 }

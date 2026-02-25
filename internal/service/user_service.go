@@ -31,7 +31,7 @@ func (s *UserService) Login(username, password string) (*model.User, error) {
 	return user, nil
 }
 
-func (s *UserService) GetTweetUserByID(userID uuid.UUID) (*model.TweetListUser, error) {
+func (s *UserService) GetCurrentTweetUserByID(userID uuid.UUID) (*model.TweetListUser, error) {
 	user, err := s.userRepo.GetUserByID(userID)
 	if err != nil {
 		return nil, err
