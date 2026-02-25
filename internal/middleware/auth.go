@@ -19,15 +19,16 @@ type Claims struct {
 func AuthMiddleware(authService *service.AuthService) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			authHeader := c.Request().Header.Get("Authorization")
-			if authHeader == "" {
-				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "authHeader == \"\""})
+			tokenStr, err := GetTokenStrInAuthHeader(c)
+			if err != nil {
+				if errors.Is(err, AuthHeaderEmptyErr) {
+					return c.JSON(http.StatusUnauthorized, map[string]string{"error": "authHeader == \"\""})
+				}
+				if errors.Is(err, AuthUnauthorizedErr) {
+					return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+				}
+				return c.JSON(http.StatusInternalServerError, map[string]string{"error": "unknown error"})
 			}
-			patrs := strings.Split(authHeader, " ")
-			if len(patrs) != 2 || patrs[0] != "Bearer" {
-				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
-			}
-			tokenStr := patrs[1]
 			token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, errors.New("unexpected signing method")
@@ -50,11 +51,11 @@ func AuthMiddleware(authService *service.AuthService) echo.MiddlewareFunc {
 					"error": "invalid access token",
 				})
 			}
-			calims, ok := token.Claims.(jwt.MapClaims)
+			claims, ok := token.Claims.(jwt.MapClaims)
 			if !ok {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 			}
-			userIDStr, ok := calims["user_id"].(string)
+			userIDStr, ok := claims["user_id"].(string)
 			if !ok {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 			}
@@ -67,4 +68,22 @@ func AuthMiddleware(authService *service.AuthService) echo.MiddlewareFunc {
 			return next(c)
 		}
 	}
+}
+
+var (
+	AuthHeaderEmptyErr  = errors.New("auth header is empty")
+	AuthUnauthorizedErr = errors.New("unauthorized")
+)
+
+func GetTokenStrInAuthHeader(c echo.Context) (string, error) {
+	authHeader := c.Request().Header.Get("Authorization")
+	if authHeader == "" {
+		return "", AuthHeaderEmptyErr
+	}
+	pars := strings.Split(authHeader, " ")
+	if len(pars) != 2 || pars[0] != "Bearer" {
+		return "", AuthUnauthorizedErr
+	}
+	tokenStr := pars[1]
+	return tokenStr, nil
 }

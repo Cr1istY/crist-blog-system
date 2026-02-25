@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"crist-blog/internal/middleware"
 	"crist-blog/internal/model"
 	"crist-blog/internal/service"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net/http"
-	"strings"
+	"regexp"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -39,7 +42,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid username or password"})
 	}
 
-	userAgent := c.Request().UserAgent()
+	userAgent, _ := h.checkUserAgent(c.Request().UserAgent())
 	ip := c.RealIP()
 
 	accessToken, refreshToken, err := h.authService.GenerateTokensWithAgent(user, userAgent, ip)
@@ -73,22 +76,23 @@ func (h *UserHandler) Login(c echo.Context) error {
 
 func (h *UserHandler) Refresh(c echo.Context) error {
 	cookie, err := c.Cookie("refresh_token")
-	userAgent := c.Request().UserAgent()
+	userAgent, _ := h.checkUserAgent(c.Request().UserAgent())
 	ip := c.RealIP()
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Refresh token not found"})
 	}
 
 	// 解析获取user_id, 由于每次程序重启后，JWT会重新生成密钥，所以，需要重新登录
-	authHeader := c.Request().Header.Get("Authorization")
-	if authHeader == "" {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "authHeader == \"\""})
+	tokenStr, err := middleware.GetTokenStrInAuthHeader(c)
+	if err != nil {
+		if errors.Is(err, middleware.AuthHeaderEmptyErr) {
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "authHeader == \"\""})
+		}
+		if errors.Is(err, middleware.AuthUnauthorizedErr) {
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "unknown error"})
 	}
-	patrs := strings.Split(authHeader, " ")
-	if len(patrs) != 2 || patrs[0] != "Bearer" {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
-	}
-	tokenStr := patrs[1]
 	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
@@ -158,4 +162,11 @@ func (h *UserHandler) ChangeUserInfo(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "用户信息更新成功"})
 
+}
+
+func (h *UserHandler) checkUserAgent(userAgent string) (string, error) {
+	var versionCleaner = regexp.MustCompile(`(Chrome|Edg|Safari|Firefox|Version)/[\d.]+`)
+	normalizedUA := versionCleaner.ReplaceAllString(userAgent, "${1}/XXX")
+	hash := sha256.Sum256([]byte(normalizedUA))
+	return hex.EncodeToString(hash[:]), nil
 }
