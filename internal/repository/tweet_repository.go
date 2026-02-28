@@ -46,8 +46,9 @@ func (r *TweetRepository) CreateWithImages(ctx context.Context, tweet *model.Twe
 				return err
 			}
 		}
+		// 删除redis缓存
 
-		return nil
+		return r.ClearTweetCache(ctx)
 	})
 }
 
