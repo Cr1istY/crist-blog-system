@@ -28,6 +28,7 @@ func main() {
 
 	db := blogConfig.ConnectDB()
 	redis := blogConfig.ConnectRedis()
+	searcher := blogConfig.ConnectIp2Region()
 
 	defer func() {
 		if redis != nil {
@@ -46,7 +47,7 @@ func main() {
 	tweetRepo := repository.NewTweetRepository(db, redis)
 
 	userService := service.NewUserService(userRepo)
-	authService := service.NewAuthService(userRepo, authRepo, jwtSecret)
+	authService := service.NewAuthService(userRepo, authRepo, searcher, jwtSecret)
 	postService := service.NewPostService(postRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 	imageService := service.NewImageService(imageRepo)
