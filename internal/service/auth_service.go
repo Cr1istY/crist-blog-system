@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	AccessTokenExpire  = 24 * time.Hour
+	AccessTokenExpire  = 3 * 24 * time.Hour
 	RefreshTokenExpire = 15 * 24 * time.Hour
 	refreshTokenLength = 64
 )
@@ -138,7 +138,7 @@ func (s *AuthService) extractProvince(regionStr string) string {
 		return regionStr
 	}
 
-	province := parts[2]
+	province := parts[1]
 
 	// 过滤掉空字符串或占位符 (有些库可能返回 "0" 表示未知)
 	if province == "" || province == "0" {
@@ -272,4 +272,12 @@ func (s *AuthService) GetTheRefreshTokenExpired() time.Duration {
 
 func (s *AuthService) JwtSecret() string {
 	return s.jwtSecret
+}
+
+func (s *AuthService) Test() {
+	ip := "14.104.0.0"
+	nowRegion, _ := s.searcher.SearchByStr(ip)
+	println(nowRegion)
+	nowProvince := s.extractProvince(nowRegion)
+	println(nowProvince)
 }
