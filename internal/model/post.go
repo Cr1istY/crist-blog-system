@@ -76,6 +76,7 @@ type PostFrontendWithPinned struct {
 	ID          uint     `gorm:"primaryKey;autoIncrement" json:"id"`
 	Slug        string   `json:"slug" validate:"required"`
 	Title       string   `json:"title"`
+	Category    string   `json:"category"`
 	Tags        []string `json:"tags"`
 	Date        string   `json:"date"`
 	Excerpt     string   `json:"excerpt"`
@@ -127,7 +128,6 @@ type PostDetail struct {
 	Content         string     `json:"content"` // Markdown 原文
 	Date            string     `json:"date"`    // 格式化后的发布日期，如 "2025年12月15日"
 	Tags            []string   `json:"tags"`
-	CategoryID      uuid.UUID  `gorm:"type:uuid;not null" json:"category_id"`
 	Category        string     `json:"category"` // 分类名称，非 ID
 	Views           int        `json:"views"`
 	Likes           int        `json:"likes"`

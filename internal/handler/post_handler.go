@@ -129,10 +129,43 @@ func (h *PostHandler) uniformizePostToViewers(post *model.Post) *model.PostDetai
 	} else {
 		dateStr = post.CreatedAt.Format("2006-1-2")
 	}
-	categoryName, err := h.categoryService.GetNameByID(post.CategoryID)
-	if err != nil {
-		categoryName = "未分类"
+	var category string
+	if post.CategoryID != uuid.Nil && post.CategoryID.String() != model.RootCategoryID {
+		var categoryNames []string
+		rawCategory, err := h.categoryService.GetNameByID(post.CategoryID)
+		if err != nil {
+			category = ""
+		}
+		categoryNames = append(categoryNames, rawCategory)
+		sonCategoryID := post.CategoryID
+		for sonCategoryID != uuid.Nil && sonCategoryID.String() != model.RootCategoryID {
+			fatherCategory, err := h.categoryService.GetFatherCategoryById(sonCategoryID)
+			if err != nil {
+				break
+			}
+			if fatherCategory.ID == uuid.Nil || fatherCategory.ID.String() == model.RootCategoryID {
+				break
+			}
+			fatherCategoryName, err := h.categoryService.GetNameByID(fatherCategory.ID)
+			if err != nil {
+				break
+			}
+			categoryNames = append(categoryNames, fatherCategoryName)
+			sonCategoryID = fatherCategory.ID
+		}
+		// 将 categoryNames 处理成 父/子/孙 的形式
+		for i := len(categoryNames) - 1; i >= 0; i-- {
+			if i == len(categoryNames)-1 {
+				category += categoryNames[i]
+			} else {
+				category += "/" + categoryNames[i]
+			}
+		}
 	}
+	//categoryName, err := h.categoryService.GetNameByID(post.CategoryID)
+	//if err != nil {
+	//	categoryName = "未分类"
+	//}
 	if post.Thumbnail == "" {
 		post.Thumbnail = assets.GetThumbnail()
 	}
@@ -142,8 +175,7 @@ func (h *PostHandler) uniformizePostToViewers(post *model.Post) *model.PostDetai
 		Content:         post.Content,
 		Date:            dateStr,
 		Tags:            post.Tags,
-		CategoryID:      post.CategoryID,
-		Category:        categoryName,
+		Category:        category,
 		Views:           post.Views,
 		Likes:           post.Likes,
 		Excerpt:         post.Excerpt,
@@ -451,10 +483,15 @@ func (h *PostHandler) blogPostsToPostWithPinned(posts []*model.Post) ([]*model.P
 		if post.Thumbnail == "" {
 			post.Thumbnail = assets.GetThumbnail()
 		}
+		category := ""
+		if post.CategoryID != uuid.Nil && post.CategoryID.String() != model.RootCategoryID {
+			category, _ = h.categoryService.GetNameByID(post.CategoryID)
+		}
 		blogPosts = append(blogPosts, &model.PostFrontendWithPinned{
 			ID:          post.ID,
 			Slug:        post.Slug,
 			Title:       post.Title,
+			Category:    category,
 			Tags:        post.Tags,
 			Date:        post.PublishedAt.Format("2006-01-02"),
 			Excerpt:     post.Excerpt,

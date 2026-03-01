@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const RootCategoryID = "00000000-0000-0000-0000-000000000000"
+
 type Category struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	Name        string    `gorm:"type:text;not null" json:"name"`
