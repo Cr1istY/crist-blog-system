@@ -178,6 +178,7 @@ func (h *PostHandler) uniformizePostToViewers(post *model.Post) *model.PostDetai
 		Content:         post.Content,
 		Date:            dateStr,
 		Tags:            post.Tags,
+		CategoryID:      post.CategoryID.String(),
 		Category:        category,
 		Views:           post.Views,
 		Likes:           post.Likes,
