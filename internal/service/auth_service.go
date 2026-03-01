@@ -6,10 +6,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/lionsoul2014/ip2region/binding/golang/xdb"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,6 +24,7 @@ const (
 type AuthService struct {
 	userRepo           *repository.UserRepository
 	refreshTokenRepo   *repository.RefreshTokenRepository
+	searcher           *xdb.Searcher
 	jwtSecret          string
 	refreshTokenLength int
 }
@@ -29,10 +32,12 @@ type AuthService struct {
 func NewAuthService(
 	userRepo *repository.UserRepository,
 	refreshTokenRepo *repository.RefreshTokenRepository,
+	searcher *xdb.Searcher,
 	jwtSecret string) *AuthService {
 	return &AuthService{
 		userRepo:           userRepo,
 		refreshTokenRepo:   refreshTokenRepo,
+		searcher:           searcher,
 		jwtSecret:          jwtSecret,
 		refreshTokenLength: refreshTokenLength}
 }
@@ -120,6 +125,29 @@ func (s *AuthService) GenerateTokens(user *model.User, userAgent, ip string) (ac
 	return accessToken, refreshToken, nil
 }
 
+func (s *AuthService) extractProvince(regionStr string) string {
+	if regionStr == "" {
+		return ""
+	}
+
+	parts := strings.Split(regionStr, "|")
+
+	// 确保至少有 3 部分 (国家|区域|省份)
+	if len(parts) < 3 {
+		// 兼容某些特殊返回或旧格式，尝试直接返回原串作为兜底
+		return regionStr
+	}
+
+	province := parts[2]
+
+	// 过滤掉空字符串或占位符 (有些库可能返回 "0" 表示未知)
+	if province == "" || province == "0" {
+		return ""
+	}
+
+	return province
+}
+
 func (s *AuthService) GenerateTokensWithAgent(user *model.User, userAgent, ip string) (accessToken, refreshToken string, err error) {
 	// 生成访问令牌，使用用户ID作为参数，仅进行校验
 	accessToken, err = s.generateAccessToken(user.ID)
@@ -141,7 +169,22 @@ func (s *AuthService) GenerateTokensWithAgent(user *model.User, userAgent, ip st
 	_ = s.refreshTokenRepo.RevokeAllByUserIDAndAgent(user.ID, userAgent)
 	// ip地址不同，撤销之前所有ip地址的刷新令牌
 	formerIp, _ := s.refreshTokenRepo.FindIpByUserIDAndUserAgent(user.ID, userAgent)
-	if ip != formerIp && formerIp != "" {
+	// 查地址
+	invokeFlag := false
+	nowRegion, err := s.searcher.SearchByStr(ip)
+	if err != nil {
+		invokeFlag = true
+	}
+	rawRegion, err := s.searcher.SearchByStr(formerIp)
+	if err != nil {
+		invokeFlag = true
+	}
+	nowProvince := s.extractProvince(nowRegion)
+	formerProvince := s.extractProvince(rawRegion)
+	if invokeFlag {
+		_ = s.refreshTokenRepo.RevokeAllByUserID(user.ID) // 没有找到，直接撤销，从安全性考虑
+	}
+	if nowProvince != formerProvince {
 		_ = s.refreshTokenRepo.RevokeAllByUserID(user.ID) // 异地登陆，禁止以往登录令牌，以最后登陆地点为主
 	}
 	// 创建新的刷新令牌记录
