@@ -167,7 +167,7 @@ func (s *AuthService) GenerateTokensWithAgent(user *model.User, userAgent, ip st
 	}
 	// 撤销该用户之前的相同Agent的所有刷新令牌
 	_ = s.refreshTokenRepo.RevokeAllByUserIDAndAgent(user.ID, userAgent)
-	// ip地址不同，撤销之前所有ip地址的刷新令牌
+	// 跨省，撤销之前所有ip地址的刷新令牌
 	formerIp, _ := s.refreshTokenRepo.FindIpByUserIDAndUserAgent(user.ID, userAgent)
 	// 查地址
 	invokeFlag := false
@@ -193,6 +193,7 @@ func (s *AuthService) GenerateTokensWithAgent(user *model.User, userAgent, ip st
 		TokenHash: string(tokenHash),                  // 哈希后的令牌
 		UserAgent: userAgent,                          // 用户代理
 		IPAddress: ip,                                 // IP地址
+		Province:  nowProvince,                        // 省份
 		ExpiresAt: time.Now().Add(RefreshTokenExpire), // 过期时间
 		Revoked:   false,                              // 未被撤销
 	}
@@ -237,9 +238,21 @@ func (s *AuthService) RefreshAccessToken(refreshTokenStr string) (newAccessToken
 func (s *AuthService) RefreshAccessTokenWithIpAndAgent(userID, refreshTokenStr, userAgent, ip string) (newAccessToken string, err error) {
 	var rt *model.RefreshToken
 	// rt, err = s.refreshTokenRepo.FindByTokenHash(refreshTokenStr)
-	rt, err = s.refreshTokenRepo.ReturnAdminHashWithIPAndAgent(userID, userAgent, ip)
+	nowRegion, err := s.searcher.SearchByStr(ip)
+	findRegionFlag := true
 	if err != nil {
-		return "", errors.New("!!!database error")
+		findRegionFlag = false
+	}
+	var nowProvince string
+	if findRegionFlag {
+		nowProvince = s.extractProvince(nowRegion)
+	} else {
+		nowProvince = "未知"
+	}
+
+	rt, err = s.refreshTokenRepo.ReturnAdminHashWithProvinceAndAgent(userID, userAgent, nowProvince)
+	if err != nil {
+		return "", errors.New("database error")
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(rt.TokenHash), []byte(refreshTokenStr))
 	if err != nil {

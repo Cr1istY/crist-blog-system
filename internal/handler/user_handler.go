@@ -132,7 +132,7 @@ func (h *UserHandler) Refresh(c echo.Context) error {
 	accessToken, err := h.authService.RefreshAccessTokenWithIpAndAgent(userIDStr, cookie.Value, userAgent, ip)
 
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error() + "your ip is " + ip})
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{

@@ -48,6 +48,14 @@ func (r *RefreshTokenRepository) ReturnAdminHashWithIPAndAgent(userID, userAgent
 	return &token, nil
 }
 
+func (r *RefreshTokenRepository) ReturnAdminHashWithProvinceAndAgent(userID, userAgent, province string) (*model.RefreshToken, error) {
+	var token model.RefreshToken
+	if err := r.DB.Where("user_id = ? AND user_agent = ? AND province = ? AND revoked = false", userID, userAgent, province).First(&token).Error; err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
+
 // Revoke revoke refresh token
 func (r *RefreshTokenRepository) Revoke(id uuid.UUID) error {
 	return r.DB.Model(&model.RefreshToken{}).
