@@ -69,8 +69,11 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	}
 	req.Slug = slug
 	excerpt := req.Excerpt
-	if len(req.Excerpt) >= 20 {
-		excerpt = req.Excerpt[:20] + "..."
+	if len([]rune(req.Excerpt)) > 20 {
+		runes := []rune(excerpt)
+		if len(runes) > 20 {
+			excerpt = string(runes[:20]) + "..."
+		}
 	}
 	req.MetaDescription = excerpt
 	if req.Thumbnail == "" {
