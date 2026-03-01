@@ -167,7 +167,7 @@ func (s *AuthService) GenerateTokensWithAgent(user *model.User, userAgent, ip st
 	}
 	// 撤销该用户之前的相同Agent的所有刷新令牌
 	_ = s.refreshTokenRepo.RevokeAllByUserIDAndAgent(user.ID, userAgent)
-	// 跨省，撤销之前所有ip地址的刷新令牌
+	// 检查是否跨省，成立则撤销之前所有ip地址的刷新令牌
 	formerIp, _ := s.refreshTokenRepo.FindIpByUserIDAndUserAgent(user.ID, userAgent)
 	// 查地址
 	invokeFlag := false
@@ -182,10 +182,10 @@ func (s *AuthService) GenerateTokensWithAgent(user *model.User, userAgent, ip st
 	nowProvince := s.extractProvince(nowRegion)
 	formerProvince := s.extractProvince(rawRegion)
 	if invokeFlag {
-		_ = s.refreshTokenRepo.RevokeAllByUserID(user.ID) // 没有找到，直接撤销，从安全性考虑
+		_ = s.refreshTokenRepo.RevokeAllByUserIDAndAgent(user.ID, userAgent) // 没有找到，直接撤销，从安全性考虑
 	}
 	if nowProvince != formerProvince {
-		_ = s.refreshTokenRepo.RevokeAllByUserID(user.ID) // 异地登陆，禁止以往登录令牌，以最后登陆地点为主
+		_ = s.refreshTokenRepo.RevokeAllByUserIDAndAgent(user.ID, userAgent) // 异地登陆，禁止以往登录令牌，以最后登陆地点为主
 	}
 	// 创建新的刷新令牌记录
 	rt := &model.RefreshToken{
