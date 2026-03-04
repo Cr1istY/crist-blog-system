@@ -49,7 +49,11 @@
           >
             登录
           </n-button>
-          <n-button text @click="handleForgotPassword" class="forgot-link"> 忘记密码？ </n-button>
+          <n-flex>
+            <n-button text @click="handleForgotPassword" class="forgot-link"> 忘记密码 </n-button>
+            <n-button text @click="handleLogout" class="admin-link"> 不登录 </n-button>
+            <n-button text @click="handleRegister" class="register-link"> 注册 </n-button>
+          </n-flex>
         </n-space>
       </n-form>
     </n-card>
@@ -153,6 +157,16 @@ const handleSubmit = async () => {
 
 const handleForgotPassword = () => {
   message.info('请联系管理员重置密码')
+}
+
+const handleLogout = () => {
+  localStorage.removeItem('access_token')
+  message.success('退出登录成功')
+  router.back()
+}
+
+const handleRegister = () => {
+  message.info('请联系管理员注册')
 }
 </script>
 

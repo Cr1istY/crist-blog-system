@@ -169,9 +169,8 @@ const formatNumber = (num: number) => (num >= 1000 ? `${(num / 1000).toFixed(1)}
 }
 .post-item.is-pinned {
   background-color: #fff9f9;
-  border-left: 3px solid #ff4d4f;
+  border-left: 0px solid #ff4d4f;
   padding-left: 13px;
-  margin-left: -3px;
 }
 .pin-badge {
   position: absolute;
@@ -179,7 +178,7 @@ const formatNumber = (num: number) => (num >= 1000 ? `${(num / 1000).toFixed(1)}
   left: -6px;
   z-index: 10;
   transform: rotate(-12deg);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0);
 }
 .post-content {
   flex: 1;
@@ -246,11 +245,10 @@ const formatNumber = (num: number) => (num >= 1000 ? `${(num / 1000).toFixed(1)}
 @media (max-width: 640px) {
   .post-item {
     flex-direction: column;
+    align-items: start;
   }
   .post-item.is-pinned {
-    border-left-width: 2px;
     padding-left: 14px;
-    margin-left: -2px;
   }
   .pin-badge {
     top: -4px;
