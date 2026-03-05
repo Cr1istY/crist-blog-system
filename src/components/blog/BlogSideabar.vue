@@ -229,7 +229,7 @@ const topTags = computed(() => {
   return Array.from(map.entries())
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
+    .slice(0, 13)
 })
 
 const topCategories = computed(() => {
