@@ -137,5 +137,6 @@ type PostDetail struct {
 	MetaDescription string     `json:"meta_description,omitempty"`
 	Status          PostStatus `gorm:"type:post_status_enum;not null" json:"status"`
 	Thumbnail       string     `json:"thumbnail"`
-	IsPinned        bool       `gorm:"default:false;not null" json:"is_pinned"` // 置顶开关
+	IsPinned        bool       `gorm:"default:false;not null" json:"is_pinned"` // 置顶开关\
+	UserAvatar      string     `json:"user_avatar"`
 }

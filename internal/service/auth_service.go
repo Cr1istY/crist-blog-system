@@ -1,6 +1,7 @@
 package service
 
 import (
+	"crist-blog/internal/blogConfig"
 	"crist-blog/internal/model"
 	"crist-blog/internal/repository"
 	"crypto/rand"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/lionsoul2014/ip2region/binding/golang/xdb"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -24,7 +24,7 @@ const (
 type AuthService struct {
 	userRepo           *repository.UserRepository
 	refreshTokenRepo   *repository.RefreshTokenRepository
-	searcher           *xdb.Searcher
+	searcher           *blogConfig.Ip2Region
 	jwtSecret          string
 	refreshTokenLength int
 }
@@ -32,7 +32,7 @@ type AuthService struct {
 func NewAuthService(
 	userRepo *repository.UserRepository,
 	refreshTokenRepo *repository.RefreshTokenRepository,
-	searcher *xdb.Searcher,
+	searcher *blogConfig.Ip2Region,
 	jwtSecret string) *AuthService {
 	return &AuthService{
 		userRepo:           userRepo,
@@ -275,7 +275,7 @@ func (s *AuthService) JwtSecret() string {
 }
 
 func (s *AuthService) Test() {
-	ip := "14.104.0.0"
+	ip := "2409:8760:1e81:10::2:76a4"
 	nowRegion, _ := s.searcher.SearchByStr(ip)
 	println(nowRegion)
 	nowProvince := s.extractProvince(nowRegion)

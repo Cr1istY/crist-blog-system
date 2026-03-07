@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/lionsoul2014/ip2region/binding/golang/xdb"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -76,24 +75,4 @@ func ConnectDB() *gorm.DB {
 
 	log.Println("🐘 Connected to PostgreSQL")
 	return db
-}
-
-func ConnectIp2Region() *xdb.Searcher {
-	dbPath := "data/ip2region_v4.xdb"
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		log.Fatal("ip2region database not found")
-		return nil
-	}
-	version, err := xdb.VersionFromName("V4")
-	if err != nil {
-		log.Fatal("failed to get ip2region version")
-		return nil
-	}
-	searcher, err := xdb.NewWithFileOnly(version, dbPath)
-	if err != nil {
-		log.Fatal("failed to create ip2region searcher")
-		return nil
-	}
-	log.Println("🌍 start ip2region")
-	return searcher
 }

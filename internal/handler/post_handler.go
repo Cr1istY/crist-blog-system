@@ -20,14 +20,16 @@ import (
 type PostHandler struct {
 	postService     *service.PostService
 	categoryService *service.CategoryService
+	userService     *service.UserService
 	rdb             *redis.Client
 	cacheKey        string
 }
 
-func NewPostHandler(postService *service.PostService, categoryService *service.CategoryService, redisService *redis.Client) *PostHandler {
+func NewPostHandler(postService *service.PostService, categoryService *service.CategoryService, userService *service.UserService, redisService *redis.Client) *PostHandler {
 	return &PostHandler{
 		postService:     postService,
 		categoryService: categoryService,
+		userService:     userService,
 		rdb:             redisService,
 		cacheKey:        "blog:posts:frontend:list:v1",
 	}
@@ -198,7 +200,11 @@ func (h *PostHandler) GetBlogBySlug(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
+	user, _ := h.userService.GetUserByID(post.UserID)
 	postToViewers := h.uniformizePostToViewers(post)
+	if user.Avatar != "" {
+		postToViewers.UserAvatar = user.Avatar
+	}
 	return c.JSON(http.StatusOK, postToViewers)
 }
 

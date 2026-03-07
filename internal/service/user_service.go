@@ -63,3 +63,7 @@ func (s *UserService) ChangeUserInfo(id uuid.UUID, user *model.User) error {
 	}
 	return nil
 }
+
+func (s *UserService) GetUserByID(id uuid.UUID) (*model.User, error) {
+	return s.userRepo.GetUserByID(id)
+}

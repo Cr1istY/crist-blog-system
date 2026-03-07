@@ -28,7 +28,7 @@ func main() {
 
 	db := blogConfig.ConnectDB()
 	redis := blogConfig.ConnectRedis()
-	searcher := blogConfig.ConnectIp2Region()
+	searcher := blogConfig.NewIp2Region()
 
 	defer func() {
 		if redis != nil {
@@ -56,7 +56,7 @@ func main() {
 
 	uploadHandler := handler.NewUploadHandler(uploadCfg)
 	uploadCOSHandler := handler.NewCOSHandler(uploadHandler, imageService, cos, uploadCfg)
-	postHandler := handler.NewPostHandler(postService, categoryService, redis)
+	postHandler := handler.NewPostHandler(postService, categoryService, userService, redis)
 	userHandler := handler.NewUserHandler(authService, userService)
 	imageHandler := handler.NewImageHandler(redis)
 	tweetHandler := handler.NewTweetHandler(tweetService, userService)
