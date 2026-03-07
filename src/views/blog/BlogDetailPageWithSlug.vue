@@ -447,7 +447,6 @@ onMounted(() => {
 
 .post-card {
   border-radius: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   background: var(--n-color);
 }
 
@@ -602,10 +601,6 @@ onMounted(() => {
     margin-bottom: 0;
     padding-bottom: 0;
     border-bottom: 1px solid var(--n-border-color);
-  }
-
-  .post-card {
-    box-shadow: 0 0px 0px rgba(0, 0, 0, 0.08);
   }
 
   .post-title {
