@@ -5,9 +5,9 @@
     <div class="decorative-bg"></div>
 
     <div class="blog-detail-page">
-      <n-spin :show="loading" description="加载中..." size="large">
+      <n-spin :show="loading" description="加载中..." size="large" style="margin-top: 24px">
         <!-- 错误提示 -->
-        <n-alert v-if="error" type="error" show-icon style="margin-bottom: 24px">
+        <n-alert v-if="error" type="error" show-icon style="margin-top: 24px">
           {{ error }}
           <template #action>
             <n-button text @click="retry">重试</n-button>
@@ -24,7 +24,7 @@
               object-fit="cover"
               preview-disabled
               width="100%"
-              style="border-radius: 8px; margin-bottom: 24px;"
+              style="border-radius: 8px"
             />
           </div>
 
@@ -32,9 +32,14 @@
           <div class="post-header">
             <h1 class="post-title">{{ post.title }}</h1>
             <div class="post-meta">
-              <n-tag type="info" size="small" round @click="goToCat(post.category)">{{
-                post.category
-              }}</n-tag>
+              <n-tag
+                type="info"
+                size="small"
+                round
+                style="cursor: pointer"
+                @click="goToCat(post.category)"
+                >{{ post.category }}</n-tag
+              >
               <n-text type="secondary">编辑于{{ post.date }}</n-text>
               <div class="post-stats">
                 <span class="stat-item">
@@ -57,7 +62,7 @@
                   round
                   type="success"
                   @click="goToTag(tag)"
-                  style="cursor: pointer; margin-right: 8px"
+                  class="tag-item"
                 >
                   {{ tag }}
                 </n-tag>
@@ -464,8 +469,7 @@ onMounted(() => {
 }
 
 .post-header {
-  margin-bottom: 2em;
-  padding-bottom: 2em;
+  padding-bottom: 1em;
   border-bottom: 1px solid var(--n-border-color);
 }
 
@@ -473,7 +477,7 @@ onMounted(() => {
   font-size: 28px;
   font-weight: 700;
   line-height: 1.4;
-  margin: 0 0 16px;
+  margin: 16px 0;
   color: var(--n-title-text-color);
 }
 
@@ -507,6 +511,34 @@ onMounted(() => {
 
 .post-tags {
   gap: 8px;
+}
+
+.tag-item {
+  cursor: pointer;
+  margin-right: 8px;
+  transition:
+    background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(0);
+}
+
+.tag-item:hover {
+  transform: translateY(-2px);
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  border-color: #059669 !important;
+  box-shadow:
+    0 10px 15px -3px rgba(5, 150, 105, 0.4),
+    0 4px 6px -2px rgba(5, 150, 105, 0.2);
+}
+
+.tag-item:active {
+  transform: translateY(-1px) scale(0.98);
+  box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.3);
+  transition-duration: 0.1s;
 }
 
 .post-excerpt {
@@ -561,16 +593,23 @@ onMounted(() => {
 
 .post-image {
   width: 100%;
-  margin-bottom: 24px;
   display: flex;
   justify-content: center;
   align-items: center;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .post-image :deep(img),
 .post-image :deep(.n-image__img) {
-  max-width: 100%;       
+  max-width: 100%;
   height: auto;
+  transition: transform 0.6s ease;
+}
+
+.post-image:hover :deep(img) {
+  border-radius: 8px;
+  transform: scale(1.04);
 }
 
 /* 响应式 */
