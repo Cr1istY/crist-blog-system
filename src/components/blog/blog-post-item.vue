@@ -31,7 +31,7 @@
             v-if="post.user"
             size="small"
             round
-            :scr="post.user.avatar"
+            :src="post.user.avatar"
             style="margin-right: 0.8em"
           />
           <n-tag
