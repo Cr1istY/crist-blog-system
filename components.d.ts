@@ -13,7 +13,9 @@ declare module 'vue' {
   export interface GlobalComponents {
     BlogPostItem: typeof import('./src/components/blog/blog-post-item.vue')['default']
     BlogSideabar: typeof import('./src/components/blog/BlogSideabar.vue')['default']
+    BlogSideBarSearcher: typeof import('./src/components/blog/blog-side-bar-searcher.vue')['default']
     HeatmapCalendarComponent: typeof import('./src/components/HeatmapCalendarComponent.vue')['default']
+    NAffix: typeof import('naive-ui')['NAffix']
     NAlert: typeof import('naive-ui')['NAlert']
     NAvatar: typeof import('naive-ui')['NAvatar']
     NAvatarGroup: typeof import('naive-ui')['NAvatarGroup']
