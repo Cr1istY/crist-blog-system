@@ -24,33 +24,27 @@ export interface UploadConfig extends AxiosRequestConfig {
 /**
  * 单个图片上传 - 适配 Go 后端
  */
-export const uploadImage = async (
-  file: File,
-  config?: UploadConfig,
-): Promise<UploadResponse> => {
+export const uploadImage = async (file: File, config?: UploadConfig): Promise<UploadResponse> => {
   const formData = new FormData()
   formData.append('image', file)
 
   try {
-    const response = await service.post<UploadResponse>(
-      '/upload/image',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total && config?.onProgress) {
-            config.onProgress({
-              loaded: progressEvent.loaded,
-              total: progressEvent.total,
-              percentage: Math.round((progressEvent.loaded / progressEvent.total) * 100),
-            })
-          }
-        },
-        ...config,
+    const response = await service.post<UploadResponse>('/upload/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
       },
-    )
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total && config?.onProgress) {
+          config.onProgress({
+            loaded: progressEvent.loaded,
+            total: progressEvent.total,
+            percentage: Math.round((progressEvent.loaded / progressEvent.total) * 100),
+          })
+        }
+      },
+      timeout: 1200000,
+      ...config,
+    })
 
     return response.data
   } catch (error) {
@@ -153,10 +147,7 @@ export const uploadChunk = async (
 /**
  * 合并分片
  */
-export const mergeChunks = async (
-  uploadId: string,
-  filename: string,
-): Promise<UploadResponse> => {
+export const mergeChunks = async (uploadId: string, filename: string): Promise<UploadResponse> => {
   const response = await service.post('/upload/merge', {
     uploadId,
     filename,

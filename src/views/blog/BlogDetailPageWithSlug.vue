@@ -156,21 +156,43 @@
             </n-space>
           </div>
         </n-card>
-
-        <!-- 返回顶部按钮 -->
-        <n-back-top :right="24" :bottom="80" />
       </n-spin>
     </div>
   </div>
+  <!-- 返回顶部按钮 -->
+  <n-back-top :right="24" :bottom="80" />
+  <n-button
+    class="sidebar-toggle-float-btn"
+    strong
+    secondary
+    circle
+    @click="toggleDrawer"
+    title="切换侧边栏"
+  >
+    <template #icon>
+      <n-icon :component="MenuOutline" />
+    </template>
+  </n-button>
+  <n-drawer v-model:show="active" :width="502" :placement="placement">
+    <n-drawer-content title="目录" closable>
+      <MdCatalog
+        v-if="post"
+        :editor-id="`post-${post.id}`"
+        :scrollElement="scrollElement"
+        :theme="isDark ? 'dark' : 'light'"
+      />
+    </n-drawer-content>
+  </n-drawer>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage, useDialog, useThemeVars } from 'naive-ui'
-import { MdPreview } from 'md-editor-v3'
+import type { DrawerPlacement } from 'naive-ui'
+import { MdPreview, MdCatalog } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
-import { EyeOutline, HeartOutline, ChatbubbleOutline } from '@vicons/ionicons5'
+import { EyeOutline, HeartOutline, ChatbubbleOutline, MenuOutline } from '@vicons/ionicons5'
 import service from '@/utils/request'
 
 // 类型定义
@@ -207,6 +229,9 @@ const isPinned = ref(false)
 const update_flag = ref(false)
 const like_flag = ref(false)
 const token = localStorage.getItem('access_token')
+
+const scrollElement = document.documentElement
+
 if (token) {
   update_flag.value = true
 }
@@ -417,6 +442,12 @@ const unpinPost = async (): Promise<void> => {
   })
 }
 
+const active = ref(false)
+const placement = ref<DrawerPlacement>('right')
+function toggleDrawer() {
+  active.value = true
+}
+
 // 监听路由变化
 watch(
   () => route.params.slug,
@@ -560,6 +591,21 @@ onMounted(() => {
   transform: scale(1.04);
 }
 
+.sidebar-toggle-float-btn {
+  position: fixed;
+  height: 44px;
+  width: 44px;
+  right: 24px;
+  bottom: 140px; /* 位于返回顶部按钮 (bottom: 80) 之上 */
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.sidebar-toggle-float-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
 /* 响应式 */
 @media (max-width: 768px) {
   .post-header {
