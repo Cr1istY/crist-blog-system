@@ -1,0 +1,172 @@
+package handler
+
+import (
+	"crist-blog/internal/middleware"
+	"crist-blog/internal/model"
+	"crist-blog/internal/service"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"net/http"
+	"regexp"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+)
+
+type UserHandler struct {
+	authService *service.AuthService
+	userService *service.UserService
+}
+
+func NewUserHandler(authService *service.AuthService, userService *service.UserService) *UserHandler {
+	return &UserHandler{
+		authService: authService,
+		userService: userService,
+	}
+}
+
+type loginRequest struct {
+	Username string `json:"username" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
+
+func (h *UserHandler) Login(c echo.Context) error {
+	req := new(loginRequest)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+	}
+	user, err := h.userService.Login(req.Username, req.Password)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid username or password"})
+	}
+
+	userAgent, _ := h.checkUserAgent(c.Request().UserAgent())
+	ip := c.RealIP()
+
+	accessToken, refreshToken, err := h.authService.GenerateTokensWithAgent(user, userAgent, ip)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to generate tokens"})
+	}
+
+	isProduction := c.Request().TLS != nil || c.Request().Header.Get("X-Forwarded-Proto") == "https"
+
+	cookie := &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HttpOnly: true,
+		Secure:   isProduction,         // 仅生产环境启用
+		SameSite: http.SameSiteLaxMode, // 开发环境用 Lax
+		Path:     "/",
+		MaxAge:   int(h.authService.GetTheRefreshTokenExpired().Seconds()),
+	}
+
+	// 生产环境才设置 Domain
+	if isProduction {
+		cookie.Domain = "foreveryang.cn"
+	}
+
+	c.SetCookie(cookie)
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"access_token": accessToken,
+	})
+}
+
+func (h *UserHandler) Refresh(c echo.Context) error {
+	cookie, err := c.Cookie("refresh_token")
+	userAgent, _ := h.checkUserAgent(c.Request().UserAgent())
+	ip := c.RealIP()
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Refresh token not found"})
+	}
+
+	// 解析获取user_id, 由于每次程序重启后，JWT会重新生成密钥，所以，需要重新登录
+	tokenStr, err := middleware.GetTokenStrInAuthHeader(c)
+	if err != nil {
+		if errors.Is(err, middleware.AuthHeaderEmptyErr) {
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "authHeader == \"\""})
+		}
+		if errors.Is(err, middleware.AuthUnauthorizedErr) {
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "unknown error"})
+	}
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(h.authService.JwtSecret()), nil
+	})
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return c.JSON(http.StatusUnauthorized, map[string]string{
+				"error": "access token expired",
+			})
+		}
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "invalid access token",
+		})
+	}
+
+	if !token.Valid {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "invalid access token",
+		})
+	}
+	calims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+	}
+	userIDStr, ok := calims["user_id"].(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+	}
+	// 现在，程序的逻辑变成了，当刷新令牌没有过期时
+	// 每一次刷新操作都会重置权限令牌
+	// 但是，当权限令牌过期或者被修改
+	// 由于此时不能正确读取user_id
+	// 所以必须重新登录
+
+	accessToken, err := h.authService.RefreshAccessTokenWithIpAndAgent(userIDStr, cookie.Value, userAgent, ip)
+
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error() + " your ip is " + ip})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"access_token": accessToken,
+	})
+}
+
+func (h *UserHandler) ChangeUserInfo(c echo.Context) error {
+	userIDStr, ok := c.Get("user_id_str").(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "无效的用户ID"})
+	}
+
+	var req model.User
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "无效的请求参数"})
+	}
+
+	err = h.userService.ChangeUserInfo(userID, &req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "用户信息更新成功"})
+
+}
+
+func (h *UserHandler) checkUserAgent(userAgent string) (string, error) {
+	var versionCleaner = regexp.MustCompile(`(Chrome|Edg|Safari|Firefox|Version)/[\d.]+`)
+	normalizedUA := versionCleaner.ReplaceAllString(userAgent, "${1}/XXX")
+	hash := sha256.Sum256([]byte(normalizedUA))
+	return hex.EncodeToString(hash[:]), nil
+}
