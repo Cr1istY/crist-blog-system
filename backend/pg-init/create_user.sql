@@ -1,0 +1,1 @@
+CREATE USER crist WITH PASSWORD 'root';

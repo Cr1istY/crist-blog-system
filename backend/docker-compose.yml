@@ -1,0 +1,39 @@
+services:
+  # --- PostgreSQL 服务 (保持不变) ---
+  db:
+    image: postgres:16
+    container_name: postgres-cristweb
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: cristweb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./pg-init/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # 如果你创建了用户脚本，也记得挂载
+      # - ./pg-init/create_user.sql:/docker-entrypoint-initdb.d/create_user.sql
+
+  # --- Redis 服务
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cristweb
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --requirepass root
+    # 可选：健康检查，确保服务启动正常
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# --- 数据卷定义 ---
+volumes:
+  pgdata:
+  redisdata:

@@ -16,6 +16,7 @@ type Config struct {
 	MaxUploadSize   int64
 	MaxUploadCount  int
 	AllowedTypes    []string
+	OpenTweet       bool
 }
 
 func Load() *Config {
@@ -32,6 +33,7 @@ func Load() *Config {
 		MaxUploadSize:   maxUploadSize,
 		MaxUploadCount:  getEnvInt("MAX_UPLOAD_COUNT", 4),
 		AllowedTypes:    []string{"image/jpeg", "image/png", "image/gif", "image/webp"},
+		OpenTweet:       getEnv("OPEN_TWEET", "false") == "true",
 	}
 }
 

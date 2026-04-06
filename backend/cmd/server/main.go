@@ -44,22 +44,17 @@ func main() {
 	postRepo := repository.NewPostRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
 	imageRepo := repository.NewImageRepository(db)
-	tweetRepo := repository.NewTweetRepository(db, redis)
 
 	userService := service.NewUserService(userRepo)
 	authService := service.NewAuthService(userRepo, authRepo, searcher, jwtSecret)
 	postService := service.NewPostService(postRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 	imageService := service.NewImageService(imageRepo)
-	tweetService := service.NewTweetService(tweetRepo)
-	cos := config.NewCOSService()
 
 	uploadHandler := handler.NewUploadHandler(uploadCfg)
-	uploadCOSHandler := handler.NewCOSHandler(uploadHandler, imageService, cos, uploadCfg)
 	postHandler := handler.NewPostHandler(postService, categoryService, userService, redis)
 	userHandler := handler.NewUserHandler(authService, userService)
 	imageHandler := handler.NewImageHandler(redis)
-	tweetHandler := handler.NewTweetHandler(tweetService, userService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 
 	e := echo.New()
@@ -73,8 +68,17 @@ func main() {
 	route.SetupUserRoutes(e, userHandler, authService)
 	route.SetupBlogRouter(e, postHandler, imageHandler, authService)
 	route.SetupCategoryRouter(e, categoryHandler, authService)
-	route.SetupUploadRouter(e, uploadHandler, uploadCOSHandler, authService)
-	route.SetupTweetRouter(e, tweetHandler, authService)
+
+	if uploadCfg.OpenTweet {
+		cos := config.NewCOSService()
+		uploadCOSHandler := handler.NewCOSHandler(uploadHandler, imageService, cos, uploadCfg)
+		tweetRepo := repository.NewTweetRepository(db, redis)
+		tweetService := service.NewTweetService(tweetRepo)
+		tweetHandler := handler.NewTweetHandler(tweetService, userService)
+		route.SetupTweetRouter(e, tweetHandler, authService)
+		route.SetupUploadRouter(e, uploadHandler, uploadCOSHandler, authService)
+	}
+
 	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {

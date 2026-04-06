@@ -22,7 +22,7 @@
 
 - Go ≥ 1.18
 - Node.js ≥ 16
-- PostgreSQL ≥ 13
+- PostgreSQL ≥ 16
 - Redis ≥ 6.0
 
 #### 安装步骤
