@@ -32,7 +32,7 @@
 1. **克隆项目**
 ```bash
 git clone https://github.com/Cr1istY/crist-blog-system.git
-cd cd crist-blog-system/
+cd crist-blog-system/
 ```
 
 2. **安装前端依赖**
