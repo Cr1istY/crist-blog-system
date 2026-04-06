@@ -118,5 +118,5 @@ gen
 uploads
 uploads/*
 
-./pg_inti/table_schema.sql
-pg_inti/table_schema.sql
+./pg_init/table_schema.sql
+pg_init/table_schema.sql
