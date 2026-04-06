@@ -100,6 +100,7 @@ fabric.properties
 # Go workspace file
 go.work
 go.work.sum
+go.sum
 
 # env file
 .env
@@ -116,3 +117,5 @@ gen
 # upload file
 uploads
 uploads/*
+
+pg_inti/table_schema.sql

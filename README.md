@@ -73,6 +73,7 @@ go mod tidy
 
 4. **启动服务**
 ```bash
+docker-compose up -d
 go run cmd/server/main.go
 ```
 
